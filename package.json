@@ -15,7 +15,8 @@
     "test:unit": "vitest run src",
     "test:e2e": "playwright test",
     "db:migrate": "tsx scripts/run-migrations.ts",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "db:verify-rls": "tsx scripts/verify-rls.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.281",

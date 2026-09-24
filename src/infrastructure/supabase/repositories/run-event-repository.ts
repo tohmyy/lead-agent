@@ -6,6 +6,7 @@ import type {
   RunEventRow,
   RunEventType,
 } from "@/infrastructure/supabase/types";
+import { sanitizeForLog } from "@/lib/logging/sanitize";
 
 export class RunEventRepository {
   private get db() {
@@ -24,7 +25,9 @@ export class RunEventRepository {
         run_id: input.runId,
         event_type: input.eventType,
         message: input.message,
-        metadata: input.metadata,
+        metadata: input.metadata
+          ? (sanitizeForLog(input.metadata) as Record<string, unknown>)
+          : input.metadata,
       })
       .select()
       .single();
