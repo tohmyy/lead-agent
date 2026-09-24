@@ -9,6 +9,8 @@ import { RunService } from "@/application/runs/run-service";
 import { createRunInputSchema } from "@/domain/runs/run";
 import type { IcpCriteriaInput } from "@/domain/icp/icp";
 import { requireCurrentUserId } from "@/lib/auth/current-user";
+import { getServerEnv } from "@/lib/config/env";
+import { log } from "@/lib/logging/logger";
 
 const runService = new RunService();
 const icpService = new IcpService();
@@ -29,7 +31,9 @@ export interface RunFormState {
  */
 function fireAndForget(work: Promise<void>, label: string) {
   work.catch((err) => {
-    console.error(`[orchestrator:${label}]`, err);
+    log.error(`[orchestrator:${label}]`, {
+      message: err instanceof Error ? err.message : String(err),
+    });
   });
 }
 
@@ -42,7 +46,10 @@ export async function createRun(
   const parsed = createRunInputSchema.safeParse({
     objective: String(formData.get("objective") ?? ""),
     qualifiedTarget: Number(formData.get("qualifiedTarget") ?? 10),
-    discoveryLimit: Number(formData.get("discoveryLimit") ?? 20),
+    discoveryLimit: Number(
+      formData.get("discoveryLimit") ??
+        getServerEnv().DEFAULT_DISCOVERY_LIMIT,
+    ),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };

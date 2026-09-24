@@ -10,7 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 
 const initialState: RunFormState = {};
 
-export function NewRunForm() {
+export function NewRunForm({
+  defaultDiscoveryLimit,
+}: {
+  defaultDiscoveryLimit: number;
+}) {
   const [state, formAction, pending] = useActionState(createRun, initialState);
 
   return (
@@ -50,7 +54,7 @@ export function NewRunForm() {
             name="discoveryLimit"
             type="number"
             min={1}
-            defaultValue={20}
+            defaultValue={defaultDiscoveryLimit}
             required
           />
           <p className="text-muted-foreground text-xs">
