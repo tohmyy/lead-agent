@@ -19,6 +19,14 @@ const MAX_PAGES_PER_CALL = 5;
 const SCRAPE_TIMEOUT_MS = 20_000;
 const SUMMARY_MAX_CHARS = 500;
 const EXCERPT_MAX_CHARS = 1200;
+/**
+ * Response-size cap (TOOLS-CONTRACT.md section 21 / BUILD-PLAN.md section
+ * 21 "apply response-size limits") — the Firecrawl SDK has no size-limiting
+ * scrape option (checked directly against its type definitions), so this is
+ * enforced here: well above any normal company page, but bounded against a
+ * pathologically large or abusive one.
+ */
+const MAX_MARKDOWN_CHARS = 200_000;
 
 function truncate(text: string, max: number): string {
   const trimmed = text.trim();
@@ -69,6 +77,14 @@ export class FirecrawlResearchProvider implements WebsiteResearchProvider {
 
       let response;
       try {
+        // No redirect-control option exists on this SDK's scrape params
+        // (checked against its type definitions) — and none is needed for
+        // SSRF purposes here: Firecrawl performs the actual fetch on its
+        // own infrastructure, not this app's, so a redirect to a private
+        // address during that fetch is a concern for Firecrawl's
+        // environment, not an SSRF vector against this one.
+        // `assertUrlIsSafeToFetch` above is still worth doing as
+        // defense-in-depth against obviously-malicious requested URLs.
         response = await this.client.scrapeUrl(safeUrl.toString(), {
           formats: ["markdown"],
           onlyMainContent: true,
@@ -84,6 +100,7 @@ export class FirecrawlResearchProvider implements WebsiteResearchProvider {
       if (!response.success) continue;
 
       const markdown = response.markdown ?? "";
+      if (markdown.length > MAX_MARKDOWN_CHARS) continue;
       const description =
         response.metadata?.description ?? response.description ?? "";
       const summarySource = description || markdown;
