@@ -5,6 +5,7 @@ import { z } from "zod";
 import { QualificationService } from "@/application/qualification/qualification-service";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import type { ToolContext } from "./tool-context";
+import { getCompanyContextOutputSchema } from "./tool-output-schemas";
 import { defineRunTool } from "./tool-runner";
 
 const qualificationService = new QualificationService();
@@ -19,6 +20,7 @@ export function createGetCompanyContextTool(ctx: ToolContext) {
     shape: {
       company_id: z.string().uuid(),
     },
+    outputSchema: getCompanyContextOutputSchema,
     purpose: "Read persisted company research context.",
     runId: ctx.runId,
     execute: async (args) => {

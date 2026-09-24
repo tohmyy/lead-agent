@@ -9,6 +9,7 @@ import {
 } from "@/domain/outreach/outreach";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import type { ToolContext } from "./tool-context";
+import { saveOutreachDraftOutputSchema } from "./tool-output-schemas";
 import { defineRunTool } from "./tool-runner";
 
 const outreachService = new OutreachService();
@@ -33,6 +34,7 @@ export function createSaveOutreachDraftTool(ctx: ToolContext) {
       body: z.string().min(1).max(4000),
       personalization_context: personalizationContextSchema,
     },
+    outputSchema: saveOutreachDraftOutputSchema,
     purpose: "Save an outreach draft for a qualified lead.",
     runId: ctx.runId,
     execute: async (args) => {

@@ -6,6 +6,7 @@ import { IcpService } from "@/application/icp/icp-service";
 import { icpCriteriaSchema } from "@/domain/icp/icp";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import type { ToolContext } from "./tool-context";
+import { saveIcpOutputSchema } from "./tool-output-schemas";
 import { defineRunTool } from "./tool-runner";
 
 const icpService = new IcpService();
@@ -28,6 +29,7 @@ export function createSaveIcpTool(ctx: ToolContext) {
         .min(1)
         .describe("Brief explanation of how the objective was interpreted."),
     },
+    outputSchema: saveIcpOutputSchema,
     purpose: "Save refined ICP criteria.",
     runId: ctx.runId,
     execute: async (args) => {

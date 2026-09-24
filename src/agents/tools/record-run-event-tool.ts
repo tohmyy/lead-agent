@@ -6,6 +6,7 @@ import { RunEventRepository } from "@/infrastructure/supabase/repositories/run-e
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import type { RunEventType } from "@/infrastructure/supabase/types";
 import type { ToolContext } from "./tool-context";
+import { recordRunEventOutputSchema } from "./tool-output-schemas";
 import { defineRunTool } from "./tool-runner";
 
 const runEventRepo = new RunEventRepository();
@@ -46,6 +47,7 @@ export function createRecordRunEventTool(ctx: ToolContext) {
       event_type: z.enum(RUN_EVENT_TYPES),
       message: z.string().min(1).max(300),
     },
+    outputSchema: recordRunEventOutputSchema,
     purpose: "Record a human-readable activity event.",
     runId: ctx.runId,
     execute: async (args) => {

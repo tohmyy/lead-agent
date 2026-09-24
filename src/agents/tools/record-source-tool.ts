@@ -6,6 +6,7 @@ import { ResearchService } from "@/application/research/research-service";
 import { SOURCE_TYPES } from "@/domain/companies/company";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import type { ToolContext } from "./tool-context";
+import { recordSourceOutputSchema } from "./tool-output-schemas";
 import { defineRunTool } from "./tool-runner";
 
 const researchService = new ResearchService();
@@ -25,6 +26,7 @@ export function createRecordSourceTool(ctx: ToolContext) {
       summary: z.string().min(1).max(2000),
       relevant_excerpt: z.string().max(1000).optional(),
     },
+    outputSchema: recordSourceOutputSchema,
     purpose: "Record source evidence for a company.",
     runId: ctx.runId,
     execute: async (args) => {

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { ResearchService } from "@/application/research/research-service";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import type { ToolContext } from "./tool-context";
+import { researchWebsiteOutputSchema } from "./tool-output-schemas";
 import { defineRunTool } from "./tool-runner";
 
 const researchService = new ResearchService();
@@ -35,6 +36,7 @@ export function createResearchWebsiteTool(ctx: ToolContext) {
           "Specific page URLs to research instead of the homepage default.",
         ),
     },
+    outputSchema: researchWebsiteOutputSchema,
     purpose: "Research a company website for qualification evidence.",
     runId: ctx.runId,
     execute: async (args) => {

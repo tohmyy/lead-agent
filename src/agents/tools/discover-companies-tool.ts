@@ -5,6 +5,7 @@ import { z } from "zod";
 import { DiscoveryService } from "@/application/discovery/discovery-service";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import type { ToolContext } from "./tool-context";
+import { discoverCompaniesOutputSchema } from "./tool-output-schemas";
 import { defineRunTool } from "./tool-runner";
 
 const discoveryService = new DiscoveryService();
@@ -29,6 +30,7 @@ export function createDiscoverCompaniesTool(ctx: ToolContext) {
           "A concise search query describing the target companies, derived from the approved ICP (e.g. industry, geography, size).",
         ),
     },
+    outputSchema: discoverCompaniesOutputSchema,
     purpose: "Discover candidate companies via Apify.",
     runId: ctx.runId,
     execute: async (args) => {

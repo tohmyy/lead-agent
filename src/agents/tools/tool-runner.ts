@@ -5,6 +5,7 @@ import type {
   AnyZodRawShape,
   InferShape,
 } from "@anthropic-ai/claude-agent-sdk";
+import type { z } from "zod";
 
 import { AppError, isAppError } from "@/domain/shared/errors";
 import { sanitizeForLog } from "@/lib/logging/sanitize";
@@ -23,6 +24,7 @@ export function defineRunTool<Schema extends AnyZodRawShape>(config: {
   name: string;
   description: string;
   shape: Schema;
+  outputSchema: z.ZodType<unknown>;
   purpose: string;
   runId: string;
   execute: (args: InferShape<Schema>) => Promise<unknown>;
@@ -37,7 +39,7 @@ export function defineRunTool<Schema extends AnyZodRawShape>(config: {
     });
 
     try {
-      const data = await config.execute(args);
+      const data = config.outputSchema.parse(await config.execute(args));
       if (toolCallId) {
         await toolCalls.complete(toolCallId, {
           status: "success",

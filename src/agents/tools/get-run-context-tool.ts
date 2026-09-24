@@ -3,6 +3,7 @@ import "server-only";
 import { IcpRepository } from "@/infrastructure/supabase/repositories/icp-repository";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import type { ToolContext } from "./tool-context";
+import { getRunContextOutputSchema } from "./tool-output-schemas";
 import { defineRunTool } from "./tool-runner";
 
 const runRepo = new RunRepository();
@@ -20,6 +21,7 @@ export function createGetRunContextTool(ctx: ToolContext) {
     description:
       "Returns the current run's objective, status, qualified/discovery limits and counts, and the approved ICP (if any). Call this whenever you need to check the run's authoritative constraints — never assume limits from earlier in the conversation.",
     shape: {},
+    outputSchema: getRunContextOutputSchema,
     purpose: "Read authoritative run context.",
     runId: ctx.runId,
     execute: async () => {
