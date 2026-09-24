@@ -96,3 +96,9 @@ export async function cancelRun(runId: string): Promise<void> {
   await runService.cancel(runId, userId);
   revalidatePath(`/runs/${runId}`);
 }
+
+export async function completeRun(runId: string): Promise<void> {
+  const userId = await requireCurrentUserId();
+  await runService.complete(runId, userId);
+  revalidatePath(`/runs/${runId}`);
+}

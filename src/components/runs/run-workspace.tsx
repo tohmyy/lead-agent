@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { RunActions } from "@/components/runs/run-actions";
 import { RunStatusBadge } from "@/components/runs/run-status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDateTime } from "@/lib/format-date";
@@ -63,7 +64,10 @@ export function RunWorkspace(props: {
             Created {formatDateTime(run.created_at)}
           </p>
         </div>
-        <RunStatusBadge status={run.status} />
+        <div className="flex items-center gap-3">
+          <RunActions run={run} />
+          <RunStatusBadge status={run.status} />
+        </div>
       </div>
 
       <Tabs defaultValue="overview">

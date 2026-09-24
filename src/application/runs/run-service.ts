@@ -87,4 +87,22 @@ export class RunService {
     });
     return updated;
   }
+
+  async complete(runId: string, userId: string): Promise<RunRow> {
+    const run = await this.runs.getOwnedRun(runId, userId);
+    const updated = await this.runs.transitionStatus(
+      runId,
+      run.status,
+      "completed",
+      {
+        completed_at: new Date().toISOString(),
+      },
+    );
+    await this.events.record({
+      runId,
+      eventType: "run_completed",
+      message: "Run marked complete by user.",
+    });
+    return updated;
+  }
 }
