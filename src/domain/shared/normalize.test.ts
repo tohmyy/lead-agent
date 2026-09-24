@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { AppError } from "./errors";
-import { normalizeDomain, normalizeUrl, parseUrlStrict } from "./normalize";
+import {
+  normalizeCompanyName,
+  normalizeDomain,
+  normalizeUrl,
+  parseUrlStrict,
+} from "./normalize";
 
 describe("normalizeDomain", () => {
   it.each([
@@ -19,6 +24,19 @@ describe("normalizeDomain", () => {
     const normalized = new Set(variants.map(normalizeDomain));
     expect(normalized.size).toBe(1);
   });
+});
+
+describe("normalizeCompanyName", () => {
+  it.each([
+    ["  Acme   Inc  ", "Acme Inc"],
+    ["Acme\tInc", "Acme Inc"],
+    ["Acme Inc", "Acme Inc"],
+  ])(
+    "normalizes %s to %s (data-model.md section 17)",
+    (input, expected) => {
+      expect(normalizeCompanyName(input)).toBe(expected);
+    },
+  );
 });
 
 describe("normalizeUrl", () => {

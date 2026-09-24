@@ -16,6 +16,16 @@ export function normalizeDomain(input: string): string {
 }
 
 /**
+ * Normalizes a company name before persistence (data-model.md section 17):
+ * trims and collapses internal whitespace. Deliberately minimal — no
+ * title-casing or legal-suffix stripping ("Inc."/"LLC"), which would risk
+ * altering a real name for no requirement anyone asked for.
+ */
+export function normalizeCompanyName(input: string): string {
+  return input.trim().replace(/\s+/g, " ");
+}
+
+/**
  * Normalizes a full URL for source-deduplication (TOOL-CONTRACTS.md
  * section 43): same host normalization as normalizeDomain, but preserves
  * the path (not the query string or fragment) since two different pages

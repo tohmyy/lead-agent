@@ -48,6 +48,7 @@ export const discoverCompaniesOutputSchema = z.object({
   count: z.number(),
   provider: z.literal("apify"),
   external_reference: z.string().optional(),
+  cost_usd: z.number().optional(),
 });
 
 const researchedSourceSchema = z.object({

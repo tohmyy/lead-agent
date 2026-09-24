@@ -45,6 +45,7 @@ export function createDiscoverCompaniesTool(ctx: ToolContext) {
         count: result.companies.length,
         provider: "apify",
         external_reference: result.externalReference,
+        cost_usd: result.costUsd,
       };
     },
   });

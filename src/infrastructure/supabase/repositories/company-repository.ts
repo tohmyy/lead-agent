@@ -1,7 +1,7 @@
 import "server-only";
 
 import { AppError } from "@/domain/shared/errors";
-import { normalizeDomain } from "@/domain/shared/normalize";
+import { normalizeCompanyName, normalizeDomain } from "@/domain/shared/normalize";
 import { createServiceRoleSupabaseClient } from "@/infrastructure/supabase/service-role-client";
 import type { DiscoveredCompanyRow } from "@/infrastructure/supabase/types";
 
@@ -45,7 +45,7 @@ export class CompanyRepository {
       .from("discovered_companies")
       .insert({
         run_id: input.runId,
-        company_name: input.companyName,
+        company_name: normalizeCompanyName(input.companyName),
         domain: input.domain,
         normalized_domain: normalizedDomain,
         discovery_source: input.discoverySource,
