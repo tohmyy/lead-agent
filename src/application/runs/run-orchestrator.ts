@@ -6,6 +6,7 @@ import { LeadRepository } from "@/infrastructure/supabase/repositories/lead-repo
 import { OutreachRepository } from "@/infrastructure/supabase/repositories/outreach-repository";
 import { RunEventRepository } from "@/infrastructure/supabase/repositories/run-event-repository";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
+import { SourceRepository } from "@/infrastructure/supabase/repositories/source-repository";
 
 const MAX_TURNS_ICP = 8;
 const MAX_BUDGET_ICP_USD = 0.5;
@@ -38,6 +39,7 @@ export class RunOrchestrator {
     private readonly events = new RunEventRepository(),
     private readonly outreach = new OutreachRepository(),
     private readonly leads = new LeadRepository(),
+    private readonly sources = new SourceRepository(),
   ) {}
 
   /** Stage 1: objective -> draft ICP. Called right after run creation. */
@@ -59,6 +61,7 @@ export class RunOrchestrator {
           ].join("\n"),
           maxTurns: MAX_TURNS_ICP,
           maxBudgetUsd: MAX_BUDGET_ICP_USD,
+          skills: ["icp-refinement"],
         },
       );
       assertAgentTurnSucceeded(result, "ICP refinement");
@@ -104,6 +107,7 @@ export class RunOrchestrator {
           ].join("\n"),
           maxTurns: MAX_TURNS_RESEARCH,
           maxBudgetUsd: MAX_BUDGET_RESEARCH_USD,
+          skills: ["lead-qualification", "lead-list-quality"],
         },
       );
       assertAgentTurnSucceeded(researchResult, "research and qualification");
@@ -143,6 +147,7 @@ export class RunOrchestrator {
             ].join("\n"),
             maxTurns: MAX_TURNS_OUTREACH,
             maxBudgetUsd: MAX_BUDGET_OUTREACH_USD,
+            skills: ["outbound-copywriting", "lead-list-quality"],
           },
         );
         assertAgentTurnSucceeded(outreachResult, "outreach generation");
@@ -159,6 +164,8 @@ export class RunOrchestrator {
         }
       }
 
+      const qualityIssues = await this.checkLeadListQuality(runId);
+
       await this.runs.transitionStatus(
         runId,
         "generating_outreach",
@@ -167,7 +174,10 @@ export class RunOrchestrator {
       await this.events.record({
         runId,
         eventType: "run_completed",
-        message: "Research complete. Ready for review.",
+        message:
+          qualityIssues.length > 0
+            ? `Research complete. Ready for review. Quality check found ${qualityIssues.length} issue(s): ${qualityIssues.join("; ")}.`
+            : "Research complete. Ready for review.",
       });
     } catch (err) {
       const current = await this.runs
@@ -185,6 +195,38 @@ export class RunOrchestrator {
         );
       }
     }
+  }
+
+  /**
+   * Deterministic check for the two lead-list-quality-guide.md checks
+   * (BUILD-PLAN.md section 24, "Lead List Quality: maintain consistency and
+   * evidence quality") that nothing else in the app already guarantees:
+   * every qualified lead has recorded evidence, and every qualified lead
+   * specifically (not just "the run as a whole", which the outreach turn's
+   * own post-condition check above only verifies) has outreach drafts.
+   * Deliberately doesn't block completion (section 40 "a single failed
+   * company should not necessarily fail the entire run") — issues surface
+   * in the human-readable activity feed for the reviewer instead.
+   */
+  private async checkLeadListQuality(runId: string): Promise<string[]> {
+    const qualifiedLeads = (await this.leads.listForRun(runId)).filter(
+      (lead) => lead.qualification_status === "qualified",
+    );
+
+    const issues: string[] = [];
+    for (const lead of qualifiedLeads) {
+      const [sources, drafts] = await Promise.all([
+        this.sources.listForCompany(lead.discovered_company_id),
+        this.outreach.listForLead(lead.id),
+      ]);
+      if (sources.length === 0) {
+        issues.push(`${lead.company_name} has no recorded evidence sources`);
+      }
+      if (drafts.length === 0) {
+        issues.push(`${lead.company_name} has no outreach drafts`);
+      }
+    }
+    return issues;
   }
 
   private async fail(

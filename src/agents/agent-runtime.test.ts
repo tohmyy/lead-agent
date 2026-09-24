@@ -31,7 +31,12 @@ describe("runAgentTurn", () => {
         runId: "11111111-1111-1111-1111-111111111111",
         userId: "22222222-2222-2222-2222-222222222222",
       },
-      { task: "test task", maxTurns: 1, maxBudgetUsd: 1 },
+      {
+        task: "test task",
+        maxTurns: 1,
+        maxBudgetUsd: 1,
+        skills: ["icp-refinement"],
+      },
     );
 
     expect(queryMock).toHaveBeenCalledTimes(1);

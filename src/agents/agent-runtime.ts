@@ -3,6 +3,7 @@ import "server-only";
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 import { buildSystemPrompt } from "@/agents/prompts/system-prompt";
+import type { SkillName } from "@/agents/skills/load-skills";
 import {
   buildLeadAgentToolServer,
   LEAD_AGENT_TOOL_NAMES,
@@ -32,9 +33,14 @@ export interface AgentTurnResult {
  */
 export async function runAgentTurn(
   ctx: ToolContext,
-  input: { task: string; maxTurns: number; maxBudgetUsd: number },
+  input: {
+    task: string;
+    maxTurns: number;
+    maxBudgetUsd: number;
+    skills: SkillName[];
+  },
 ): Promise<AgentTurnResult> {
-  const systemPrompt = await buildSystemPrompt();
+  const systemPrompt = await buildSystemPrompt(input.skills);
   const toolServer = buildLeadAgentToolServer(ctx);
 
   let last: AgentTurnResult = {

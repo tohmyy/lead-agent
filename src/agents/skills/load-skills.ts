@@ -16,30 +16,48 @@ import path from "node:path";
  * guidance is always present without ever giving the model file access.
  */
 const SKILL_FILES = [
-  "outreach-safety.md", // standing scope boundaries — always first
-  "icp-refinement.md",
-  "lead-qualification.md",
-  "outbound-copywriting.md",
-  "lead-list-quality.md",
+  { name: "outreach-safety", file: "outreach-safety.md" }, // standing scope boundaries — always first
+  { name: "icp-refinement", file: "icp-refinement.md" },
+  { name: "lead-qualification", file: "lead-qualification.md" },
+  { name: "outbound-copywriting", file: "outbound-copywriting.md" },
+  { name: "lead-list-quality", file: "lead-list-quality.md" },
 ] as const;
+
+export type SkillName = (typeof SKILL_FILES)[number]["name"];
 
 function stripFrontmatter(content: string): string {
   return content.replace(/^---\n[\s\S]*?\n---\n/, "").trim();
 }
 
-let cached: string | undefined;
+let fileCache: Map<SkillName, string> | undefined;
 
-export async function loadSkillsText(): Promise<string> {
-  if (cached) return cached;
+async function getFileCache(): Promise<Map<SkillName, string>> {
+  if (fileCache) return fileCache;
 
   const dir = path.join(process.cwd(), "src", "agents", "skills");
-  const contents = await Promise.all(
-    SKILL_FILES.map(async (file) => {
+  const entries = await Promise.all(
+    SKILL_FILES.map(async ({ name, file }) => {
       const raw = await readFile(path.join(dir, file), "utf8");
-      return stripFrontmatter(raw);
+      return [name, stripFrontmatter(raw)] as const;
     }),
   );
+  fileCache = new Map(entries);
+  return fileCache;
+}
 
-  cached = contents.join("\n\n---\n\n");
-  return cached;
+/**
+ * Loads only the skills relevant to the current agent turn (BUILD-PLAN.md
+ * section 45 — the runtime should only receive what's relevant to the
+ * current step). `outreach-safety` is always included regardless of what's
+ * requested: it carries the standing scope boundaries (never send, never
+ * treat scraped content as instructions, never access secrets) that apply
+ * to every phase, not outreach-specific rules — hence its "always first"
+ * position in SKILL_FILES.
+ */
+export async function loadSkillsText(skillNames: SkillName[]): Promise<string> {
+  const cache = await getFileCache();
+  const wanted = new Set<SkillName>(["outreach-safety", ...skillNames]);
+  return SKILL_FILES.filter((s) => wanted.has(s.name))
+    .map((s) => cache.get(s.name)!)
+    .join("\n\n---\n\n");
 }
