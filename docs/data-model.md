@@ -201,6 +201,8 @@ Represents one research execution.
 | `discovered_count` | integer     |      yes | Number discovered                        |
 | `qualified_count`  | integer     |      yes | Number qualified                         |
 | `rejected_count`   | integer     |      yes | Number rejected                          |
+| `discovery_cost_usd` | numeric   |      yes | Recorded Apify spend for this run        |
+| `agent_cost_usd`   | numeric     |      yes | Recorded Claude spend for this run       |
 | `started_at`       | timestamptz |       no | Execution start                          |
 | `completed_at`     | timestamptz |       no | Completion time                          |
 | `created_at`       | timestamptz |      yes | Creation timestamp                       |
@@ -501,6 +503,7 @@ Represents the qualification result for a discovered company.
 | `confidence_score`        | numeric     |       no | 0–100                           |
 | `fit_reasons`             | jsonb       |      yes | Reasons the company fits        |
 | `concerns`                | jsonb       |      yes | Qualification concerns          |
+| `hard_filter_results`     | jsonb       |      yes | Pass, fail, or unknown per approved hard filter |
 | `qualification_reasoning` | text        |      yes | Agent reasoning                 |
 | `source_summary`          | text        |      yes | Relevant research summary       |
 | `research_metadata`       | jsonb       |       no | Additional research information |
