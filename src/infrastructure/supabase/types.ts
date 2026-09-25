@@ -46,6 +46,8 @@ export type OutreachChannel = "email" | "linkedin";
 
 export type ToolCallStatus = "pending" | "running" | "success" | "failed";
 
+export type NotificationType = "run_failed";
+
 export type RunEventType =
   | "run_created"
   | "icp_refined"
@@ -224,6 +226,17 @@ export type OutreachDraftRow = {
   updated_at: string;
 };
 
+export type NotificationRow = {
+  id: string;
+  user_id: string;
+  run_id: string | null;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read_at: string | null;
+  created_at: string;
+};
+
 /**
  * Marks `K` optional (columns with a DB-level default, e.g. `default now()`
  * or `default false`) while leaving every other column as-required for
@@ -312,6 +325,11 @@ type OutreachDraftInsert = Optional<
   | "updated_at"
 >;
 
+type NotificationInsert = Optional<
+  NotificationRow,
+  "id" | "run_id" | "read_at" | "created_at"
+>;
+
 export type Database = {
   public: {
     Tables: {
@@ -334,6 +352,11 @@ export type Database = {
         OutreachDraftRow,
         OutreachDraftInsert,
         Partial<OutreachDraftRow>
+      >;
+      notifications: Table<
+        NotificationRow,
+        NotificationInsert,
+        Partial<NotificationRow>
       >;
     };
     Views: Record<string, never>;
