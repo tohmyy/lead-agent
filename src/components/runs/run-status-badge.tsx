@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import type { RunStatus } from "@/infrastructure/supabase/types";
 
 /** Icon + text, never color alone (UI-SPEC.md section 6.2 / section 33 accessibility). */
-const STATUS_DISPLAY: Record<
+export const STATUS_DISPLAY: Record<
   RunStatus,
   {
     label: string;
