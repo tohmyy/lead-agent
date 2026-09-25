@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import { RunActions } from "@/components/runs/run-actions";
 import { RunStatusBadge } from "@/components/runs/run-status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { isRunActive } from "@/domain/runs/run";
+import { createBrowserSupabaseClient } from "@/infrastructure/supabase/browser-client";
 import { formatDateTime } from "@/lib/format-date";
 import type {
   DiscoveredCompanyRow,
@@ -23,11 +25,17 @@ import { LeadsTab } from "./tabs/leads-tab";
 import { OutreachTab } from "./tabs/outreach-tab";
 import { OverviewTab } from "./tabs/overview-tab";
 
-const ACTIVE_STATUSES = new Set([
-  "awaiting_icp_approval",
-  "researching",
-  "generating_outreach",
-]);
+/** Tables relevant to an active run's detail view (BUILD-PLAN.md section 50). */
+const REALTIME_RUN_ID_TABLES = [
+  "run_events",
+  "tool_calls",
+  "leads",
+  "outreach_drafts",
+] as const;
+
+const REALTIME_DEBOUNCE_MS = 400;
+/** Safety net if the WebSocket connection silently drops — realtime handles the common case. */
+const FALLBACK_POLL_MS = 20_000;
 
 export function RunWorkspace(props: {
   run: RunRow;
@@ -43,15 +51,71 @@ export function RunWorkspace(props: {
   const { run } = props;
   const router = useRouter();
 
-  // Simple polling refresh while the run is still active, so progress
-  // (discovered/qualified counts, activity feed, leads) shows up without a
-  // manual reload — the deferred follow-up pass upgrades this to Supabase
-  // Realtime (see the implementation plan's scope note).
+  // Realtime refresh while the run is still active (BUILD-PLAN.md section
+  // 50): a Supabase channel pushes an update the moment something relevant
+  // actually changes, instead of polling blindly on a timer. Debounced
+  // since several tool calls commonly land within the same second during
+  // active research. A much lighter fallback poll stays alongside it as a
+  // safety net in case the WebSocket connection silently drops.
   useEffect(() => {
-    if (!ACTIVE_STATUSES.has(run.status)) return;
-    const interval = setInterval(() => router.refresh(), 4000);
-    return () => clearInterval(interval);
-  }, [run.status, router]);
+    if (!isRunActive(run.status)) return;
+
+    const supabase = createBrowserSupabaseClient();
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | undefined;
+    let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+    const scheduleRefresh = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => router.refresh(), REALTIME_DEBOUNCE_MS);
+    };
+
+    (async () => {
+      // createBrowserSupabaseClient's session is hydrated from cookies
+      // asynchronously (@supabase/ssr). Subscribing before that resolves
+      // authenticates the realtime connection as anonymous — the JOIN
+      // still succeeds (accepting a subscription doesn't require a valid
+      // user), but every broadcast is then silently dropped by RLS with no
+      // visible error. Confirmed live: without this, "Subscribed to
+      // PostgreSQL" comes back fine and heartbeats flow, but zero change
+      // events ever arrive despite real writes happening. Explicitly
+      // resolving the session and setting realtime auth before subscribing
+      // fixes it.
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (session) supabase.realtime.setAuth(session.access_token);
+
+      channel = supabase.channel(`run-${run.id}`);
+      for (const table of REALTIME_RUN_ID_TABLES) {
+        channel.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table, filter: `run_id=eq.${run.id}` },
+          scheduleRefresh,
+        );
+      }
+      channel.on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "runs",
+          filter: `id=eq.${run.id}`,
+        },
+        scheduleRefresh,
+      );
+      channel.subscribe();
+    })();
+
+    const fallback = setInterval(() => router.refresh(), FALLBACK_POLL_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceTimer);
+      clearInterval(fallback);
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [run.id, run.status, router]);
 
   return (
     <div className="space-y-6">
