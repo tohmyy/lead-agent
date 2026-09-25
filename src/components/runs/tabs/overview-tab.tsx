@@ -4,11 +4,27 @@ import type {
   LeadRow,
   RunRow,
 } from "@/infrastructure/supabase/types";
+import { cn } from "@/lib/utils";
 
-function Stat({ label, value }: { label: string; value: string | number }) {
+function Stat({
+  label,
+  value,
+  accent = false,
+}: {
+  label: string;
+  value: string | number;
+  accent?: boolean;
+}) {
   return (
     <div>
-      <p className="text-2xl font-semibold tabular-nums">{value}</p>
+      <p
+        className={cn(
+          "text-2xl font-semibold tabular-nums",
+          accent && "text-primary",
+        )}
+      >
+        {value}
+      </p>
       <p className="text-muted-foreground text-sm">{label}</p>
     </div>
   );
@@ -34,12 +50,13 @@ export function OverviewTab({
     <div className="grid gap-4 md:grid-cols-2">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Progress</CardTitle>
+          <CardTitle>Progress</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-4">
           <Stat
             label={`Qualified leads (of ${run.qualified_target})`}
             value={run.qualified_count}
+            accent
           />
           <Stat
             label={`Companies discovered (of ${run.discovery_limit})`}
@@ -52,7 +69,7 @@ export function OverviewTab({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Research limits</CardTitle>
+          <CardTitle>Research limits</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p>

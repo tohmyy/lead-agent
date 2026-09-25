@@ -56,10 +56,8 @@ export default async function DashboardPage({
 
   return (
     <AppShell>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          Recent Research
-        </h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-display tracking-tight">Recent Research</h1>
         <Button
           nativeButton={false}
           render={<Link href="/runs/new">+ New Research</Link>}
@@ -67,7 +65,7 @@ export default async function DashboardPage({
       </div>
 
       {allRuns.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-6 flex flex-wrap gap-2">
           {STATUS_FILTERS.map((f) => (
             <Link
               key={f.value}
@@ -75,7 +73,7 @@ export default async function DashboardPage({
               className={cn(
                 "rounded-full border px-3 py-1 text-sm transition-colors",
                 activeFilter === f.value
-                  ? "bg-foreground text-background border-foreground"
+                  ? "bg-primary text-primary-foreground border-primary"
                   : "text-muted-foreground hover:bg-accent",
               )}
             >
@@ -104,7 +102,7 @@ export default async function DashboardPage({
               <Card className="hover:border-primary/50 h-full transition-colors">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="line-clamp-2 text-base font-medium">
+                    <CardTitle className="line-clamp-2">
                       {run.objective}
                     </CardTitle>
                   </div>

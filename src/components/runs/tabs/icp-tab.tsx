@@ -87,7 +87,7 @@ export function IcpTab({
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Original objective</CardTitle>
+          <CardTitle>Original objective</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground text-sm">
@@ -98,12 +98,14 @@ export function IcpTab({
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base">
+          <CardTitle>
             Refined ICP{" "}
             {approvedIcp ? (
-              <Badge className="ml-2">Approved</Badge>
+              <Badge variant="success" className="ml-2">
+                Approved
+              </Badge>
             ) : (
-              <Badge variant="secondary" className="ml-2">
+              <Badge variant="warning" className="ml-2">
                 Awaiting approval
               </Badge>
             )}

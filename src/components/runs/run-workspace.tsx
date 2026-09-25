@@ -121,7 +121,7 @@ export function RunWorkspace(props: {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="max-w-2xl text-xl font-semibold tracking-tight">
+          <h1 className="text-heading max-w-2xl tracking-tight">
             {run.objective}
           </h1>
           <p className="text-muted-foreground text-sm">

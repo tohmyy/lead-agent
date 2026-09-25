@@ -7,23 +7,23 @@ export const STATUS_DISPLAY: Record<
   {
     label: string;
     icon: string;
-    variant: "default" | "secondary" | "destructive" | "outline";
+    variant: "secondary" | "destructive" | "outline" | "success" | "warning" | "info";
   }
 > = {
   draft: { label: "Draft", icon: "○", variant: "outline" },
   awaiting_icp_approval: {
     label: "Awaiting ICP approval",
     icon: "●",
-    variant: "secondary",
+    variant: "warning",
   },
-  researching: { label: "Researching", icon: "◉", variant: "secondary" },
+  researching: { label: "Researching", icon: "◉", variant: "info" },
   generating_outreach: {
     label: "Generating outreach",
     icon: "◉",
-    variant: "secondary",
+    variant: "info",
   },
-  awaiting_review: { label: "Awaiting review", icon: "●", variant: "default" },
-  completed: { label: "Completed", icon: "✓", variant: "default" },
+  awaiting_review: { label: "Awaiting review", icon: "●", variant: "warning" },
+  completed: { label: "Completed", icon: "✓", variant: "success" },
   failed: { label: "Failed", icon: "!", variant: "destructive" },
   cancelled: { label: "Cancelled", icon: "×", variant: "outline" },
 };

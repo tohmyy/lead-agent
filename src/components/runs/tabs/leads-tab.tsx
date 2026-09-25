@@ -32,6 +32,16 @@ const STATUS_LABEL: Record<LeadRow["qualification_status"], string> = {
   needs_review: "Needs review",
 };
 
+/** UI-SPEC.md section 36: Qualified -> success, Needs review -> warning, Not qualified -> neutral. */
+const STATUS_VARIANT: Record<
+  LeadRow["qualification_status"],
+  "success" | "warning" | "outline"
+> = {
+  qualified: "success",
+  needs_review: "warning",
+  not_qualified: "outline",
+};
+
 export function LeadsTab({
   run,
   leads,
@@ -95,15 +105,7 @@ export function LeadsTab({
                   {lead.company_name}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={
-                      lead.qualification_status === "qualified"
-                        ? "default"
-                        : lead.qualification_status === "needs_review"
-                          ? "secondary"
-                          : "outline"
-                    }
-                  >
+                  <Badge variant={STATUS_VARIANT[lead.qualification_status]}>
                     {STATUS_LABEL[lead.qualification_status]}
                   </Badge>
                 </TableCell>
@@ -167,7 +169,9 @@ function LeadDetail({
       </SheetHeader>
       <div className="space-y-6 px-4 pb-6">
         <div className="flex items-center gap-2">
-          <Badge>{STATUS_LABEL[lead.qualification_status]}</Badge>
+          <Badge variant={STATUS_VARIANT[lead.qualification_status]}>
+            {STATUS_LABEL[lead.qualification_status]}
+          </Badge>
           {lead.confidence_score !== null && (
             <span className="text-muted-foreground text-sm">
               {lead.confidence_score}% confidence

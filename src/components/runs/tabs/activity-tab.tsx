@@ -19,6 +19,23 @@ const EVENT_ICON: Record<string, string> = {
   run_cancelled: "×",
 };
 
+/**
+ * UI-SPEC.md section 40: the activity feed should distinguish actions the
+ * agent performed from actions the human performed. Derived from the
+ * existing event_type rather than a new "actor" column — only run_created,
+ * icp_approved, and run_cancelled originate from a human action in this
+ * app's current event set.
+ */
+const USER_EVENT_TYPES = new Set([
+  "run_created",
+  "icp_approved",
+  "run_cancelled",
+]);
+
+function eventActor(eventType: string): "You" | "Agent" {
+  return USER_EVENT_TYPES.has(eventType) ? "You" : "Agent";
+}
+
 export function ActivityTab({
   events,
   toolCalls,
@@ -40,19 +57,32 @@ export function ActivityTab({
     <div className="space-y-6">
       <Card>
         <CardContent className="divide-y py-0">
-          {events.map((event) => (
-            <div key={event.id} className="flex items-start gap-3 py-3">
-              <span aria-hidden className="text-muted-foreground mt-0.5">
-                {EVENT_ICON[event.event_type] ?? "•"}
-              </span>
-              <div className="flex-1">
-                <p className="text-sm">{event.message}</p>
-                <p className="text-muted-foreground text-xs">
-                  {formatTime(event.created_at)}
-                </p>
+          {events.map((event) => {
+            const actor = eventActor(event.event_type);
+            return (
+              <div key={event.id} className="flex items-start gap-3 py-3">
+                <span aria-hidden className="text-muted-foreground mt-0.5">
+                  {EVENT_ICON[event.event_type] ?? "•"}
+                </span>
+                <div className="flex-1">
+                  <p className="text-sm">{event.message}</p>
+                  <p className="text-muted-foreground text-metadata flex items-center gap-1.5">
+                    <span
+                      className={
+                        actor === "You"
+                          ? "text-info font-medium"
+                          : "text-muted-foreground font-medium"
+                      }
+                    >
+                      {actor}
+                    </span>
+                    <span aria-hidden>·</span>
+                    {formatTime(event.created_at)}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 

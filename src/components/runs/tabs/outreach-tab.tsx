@@ -38,7 +38,7 @@ function DraftEditor({
         <span className="text-sm font-medium">{label}</span>
         <Badge
           variant={
-            draft.review_state === "approved_for_export" ? "default" : "outline"
+            draft.review_state === "approved_for_export" ? "success" : "outline"
           }
         >
           {draft.review_state.replace(/_/g, " ")}
@@ -154,7 +154,7 @@ export function OutreachTab({
         return (
           <Card key={lead.id}>
             <CardHeader>
-              <CardTitle className="text-base">{lead.company_name}</CardTitle>
+              <CardTitle>{lead.company_name}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {drafts.length === 0 ? (
