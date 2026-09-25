@@ -126,6 +126,19 @@ export class RunOrchestrator {
       assertAgentTurnSucceeded(researchResult, "research and qualification");
 
       const afterResearch = await this.runs.getOwnedRun(runId, userId);
+      // BUILD-PLAN.md section 38's control loop only has two legitimate
+      // stopping conditions: qualified_count reaches qualified_target, or
+      // the discovery budget is exhausted. The research turn above is one
+      // continuous agent conversation, not a deterministic loop this class
+      // drives itself — so the agent could end its turn early
+      // (stop_reason "end_turn", no error) with turns and discovery slots
+      // still available. assertAgentTurnSucceeded only catches a literal
+      // error; it can't catch a premature stop. Checked here rather than
+      // trusted from the agent's own turn outcome.
+      const underTarget =
+        afterResearch.qualified_count < afterResearch.qualified_target &&
+        afterResearch.discovered_count < afterResearch.discovery_limit;
+
       await this.runs.transitionStatus(
         runId,
         "researching",
@@ -178,6 +191,12 @@ export class RunOrchestrator {
       }
 
       const qualityIssues = await this.checkLeadListQuality(runId);
+      const allIssues = underTarget
+        ? [
+            `Run stopped with ${afterResearch.qualified_count}/${afterResearch.qualified_target} qualified leads while discovery budget remained (${afterResearch.discovered_count}/${afterResearch.discovery_limit} companies discovered)`,
+            ...qualityIssues,
+          ]
+        : qualityIssues;
 
       await this.runs.transitionStatus(
         runId,
@@ -188,8 +207,8 @@ export class RunOrchestrator {
         runId,
         eventType: "run_completed",
         message:
-          qualityIssues.length > 0
-            ? `Research complete. Ready for review. Quality check found ${qualityIssues.length} issue(s): ${qualityIssues.join("; ")}.`
+          allIssues.length > 0
+            ? `Research complete. Ready for review. Quality check found ${allIssues.length} issue(s): ${allIssues.join("; ")}.`
             : "Research complete. Ready for review.",
       });
     } catch (err) {
