@@ -6,6 +6,9 @@ import {
   assertConfidenceInRange,
   assertHardFilterResults,
   assertHardFiltersNotViolated,
+  industryFromMetadata,
+  locationFromMetadata,
+  saveLeadInputSchema,
 } from "./lead";
 
 describe("assertConfidenceInRange", () => {
@@ -99,5 +102,80 @@ describe("assertHardFiltersNotViolated", () => {
         employee_count: 500,
       }),
     ).not.toThrow();
+  });
+});
+
+describe("industryFromMetadata", () => {
+  it("returns the industry when present", () => {
+    expect(industryFromMetadata({ industry: "Fintech" })).toBe("Fintech");
+  });
+
+  it("returns null when missing", () => {
+    expect(industryFromMetadata({})).toBeNull();
+    expect(industryFromMetadata(null)).toBeNull();
+    expect(industryFromMetadata(undefined)).toBeNull();
+  });
+
+  it("returns null for a blank or non-string value", () => {
+    expect(industryFromMetadata({ industry: "   " })).toBeNull();
+    expect(industryFromMetadata({ industry: 42 })).toBeNull();
+  });
+});
+
+describe("locationFromMetadata", () => {
+  it("returns the location when present", () => {
+    expect(locationFromMetadata({ location: "Austin, TX" })).toBe(
+      "Austin, TX",
+    );
+  });
+
+  it("returns null when missing or malformed", () => {
+    expect(locationFromMetadata({})).toBeNull();
+    expect(locationFromMetadata({ location: "" })).toBeNull();
+    expect(locationFromMetadata({ location: 7 })).toBeNull();
+  });
+});
+
+describe("saveLeadInputSchema research_metadata", () => {
+  const SOURCE_ID = "11111111-1111-4111-8111-111111111111";
+  const basePayload = {
+    company_id: "22222222-2222-4222-8222-222222222222",
+    qualification_status: "qualified" as const,
+    confidence_score: 80,
+    fit_reasons: [
+      {
+        reason: "Matches ICP",
+        source_ids: [SOURCE_ID],
+      },
+    ],
+    concerns: [],
+    hard_filter_results: [],
+    qualification_reasoning: "Fits the approved criteria.",
+    source_summary: "Reviewed the company homepage.",
+  };
+
+  it("accepts research_metadata with industry and location", () => {
+    const parsed = saveLeadInputSchema.safeParse({
+      ...basePayload,
+      research_metadata: {
+        employee_count: 50,
+        industry: "Fintech",
+        location: "Austin, TX",
+      },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("still accepts an old-shaped payload with only employee_count (pre-upgrade leads)", () => {
+    const parsed = saveLeadInputSchema.safeParse({
+      ...basePayload,
+      research_metadata: { employee_count: 50 },
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("accepts a payload with no research_metadata at all", () => {
+    const parsed = saveLeadInputSchema.safeParse(basePayload);
+    expect(parsed.success).toBe(true);
   });
 });

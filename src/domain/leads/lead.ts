@@ -61,6 +61,8 @@ export const saveLeadInputSchema = z.object({
   research_metadata: z
     .object({
       employee_count: z.number().int().nonnegative().optional(),
+      industry: z.string().trim().min(1).optional(),
+      location: z.string().trim().min(1).optional(),
     })
     .optional(),
 });
@@ -162,4 +164,18 @@ export function employeeCountFromMetadata(
     return null;
   }
   return value;
+}
+
+export function industryFromMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+): string | null {
+  const value = metadata?.industry;
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+export function locationFromMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+): string | null {
+  const value = metadata?.location;
+  return typeof value === "string" && value.trim() ? value : null;
 }
