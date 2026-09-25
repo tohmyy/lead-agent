@@ -31,6 +31,18 @@ const serverEnvSchema = z.object({
 
   APIFY_DISCOVERY_ACTOR_ID: z.string().min(1).optional(),
   RESEARCH_PROVIDER: z.enum(["firecrawl", "crawl4ai"]).default("firecrawl"),
+
+  // Optional: failure-notification emails (src/lib/email/resend-client.ts).
+  // The app must keep working with these unset — email delivery is a
+  // best-effort side effect, never a requirement to run.
+  RESEND_API_KEY: z.string().min(1).optional(),
+  // Resend accepts either a bare address or the "Name <addr>" form, so this
+  // is intentionally not `.email()`.
+  EMAIL_FROM: z.string().min(1).optional(),
+  // Base URL used to build an absolute link back into the app from an email
+  // body. Server-only (never sent to the browser), so this is a plain env
+  // var, not NEXT_PUBLIC_*.
+  APP_URL: z.string().url().optional(),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
