@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 
 import { setLeadReviewState } from "@/app/actions/review";
+import { ApprovedCriteriaStrip } from "@/components/runs/approved-criteria-strip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +21,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { employeeCountFromMetadata } from "@/domain/leads/lead";
 import type {
+  HardFilterResult,
   LeadRow,
   LeadSourceRow,
   RunRow,
@@ -42,14 +45,36 @@ const STATUS_VARIANT: Record<
   not_qualified: "outline",
 };
 
+const FILTER_VARIANT: Record<
+  HardFilterResult["result"],
+  "success" | "destructive" | "warning"
+> = {
+  pass: "success",
+  fail: "destructive",
+  unknown: "warning",
+};
+
+const SOURCE_TYPE_LABEL: Record<LeadSourceRow["source_type"], string> = {
+  homepage: "Homepage",
+  about: "About",
+  product: "Product",
+  services: "Services",
+  pricing: "Pricing",
+  careers: "Careers",
+  blog: "Blog",
+  other: "Other",
+};
+
 export function LeadsTab({
   run,
   leads,
   sourcesByCompany,
+  hardFilters,
 }: {
   run: RunRow;
   leads: LeadRow[];
   sourcesByCompany: Record<string, LeadSourceRow[]>;
+  hardFilters?: string[];
 }) {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
@@ -72,6 +97,7 @@ export function LeadsTab({
 
   return (
     <div className="space-y-3">
+      <ApprovedCriteriaStrip hardFilters={hardFilters} />
       <div className="flex items-center justify-between">
         <p className="text-muted-foreground text-sm">
           {qualified.length} qualified
@@ -90,6 +116,7 @@ export function LeadsTab({
               <TableHead>Company</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Confidence</TableHead>
+              <TableHead>Employees</TableHead>
               <TableHead>Domain</TableHead>
               <TableHead>Review state</TableHead>
             </TableRow>
@@ -109,12 +136,13 @@ export function LeadsTab({
                     {STATUS_LABEL[lead.qualification_status]}
                   </Badge>
                 </TableCell>
-                <TableCell
-                  title="Confidence in this assessment — not a measure of sales priority, conversion likelihood, or company quality."
-                >
+                <TableCell title="Confidence in this assessment — not a measure of sales priority, conversion likelihood, or company quality.">
                   {lead.confidence_score !== null
                     ? `${lead.confidence_score}%`
                     : "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {employeeCountFromMetadata(lead.research_metadata) ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {lead.domain}
@@ -185,12 +213,45 @@ function LeadDetail({
           </p>
         )}
 
+        {employeeCountFromMetadata(lead.research_metadata) !== null && (
+          <p className="text-sm">
+            <span className="font-medium">Employees:</span>{" "}
+            {employeeCountFromMetadata(lead.research_metadata)}
+          </p>
+        )}
+
+        {(lead.hard_filter_results ?? []).length > 0 && (
+          <div>
+            <h3 className="mb-2 text-sm font-medium">Hard filters</h3>
+            <ul className="space-y-2">
+              {lead.hard_filter_results.map((item) => (
+                <li key={item.filter} className="text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>{item.filter}</span>
+                    <Badge variant={FILTER_VARIANT[item.result]}>
+                      {item.result}
+                    </Badge>
+                  </div>
+                  {item.evidence && (
+                    <p className="text-muted-foreground">{item.evidence}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {fitReasons.length > 0 && (
           <div>
             <h3 className="mb-2 text-sm font-medium">Why it fits</h3>
-            <ul className="list-disc space-y-1 pl-5 text-sm">
-              {fitReasons.map((r, i) => (
-                <li key={i}>{r.reason}</li>
+            <ul className="list-disc space-y-2 pl-5 text-sm">
+              {fitReasons.map((reason, i) => (
+                <li key={i}>
+                  {reason.reason}
+                  {reason.evidence && (
+                    <p className="text-muted-foreground">{reason.evidence}</p>
+                  )}
+                </li>
               ))}
             </ul>
           </div>
@@ -223,23 +284,34 @@ function LeadDetail({
         </div>
 
         {sources.length > 0 && (
-          <div>
-            <h3 className="mb-2 text-sm font-medium">Sources</h3>
-            <ul className="space-y-2">
-              {sources.map((s) => (
-                <li key={s.id} className="text-sm">
-                  <a
-                    href={s.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium underline underline-offset-2"
-                  >
-                    {s.title || s.url}
-                  </a>
-                  <p className="text-muted-foreground">{s.summary}</p>
-                </li>
-              ))}
-            </ul>
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium">Sources</h3>
+            {Array.from(groupSources(sources).entries()).map(
+              ([type, items]) => (
+                <div key={type}>
+                  <p className="text-muted-foreground mb-1 text-xs">
+                    {SOURCE_TYPE_LABEL[type]}
+                  </p>
+                  <ul className="space-y-2">
+                    {items.map((source) => (
+                      <li key={source.id} className="text-sm">
+                        <a
+                          href={source.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-medium underline underline-offset-2"
+                        >
+                          {source.title || source.url}
+                        </a>
+                        <p className="text-muted-foreground">
+                          {source.summary}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ),
+            )}
           </div>
         )}
 
@@ -260,4 +332,14 @@ function LeadDetail({
       </div>
     </>
   );
+}
+
+function groupSources(sources: LeadSourceRow[]) {
+  const grouped = new Map<LeadSourceRow["source_type"], LeadSourceRow[]>();
+  for (const source of sources) {
+    const list = grouped.get(source.source_type) ?? [];
+    list.push(source);
+    grouped.set(source.source_type, list);
+  }
+  return grouped;
 }

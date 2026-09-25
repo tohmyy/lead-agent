@@ -37,6 +37,22 @@ const REALTIME_DEBOUNCE_MS = 400;
 /** Safety net if the WebSocket connection silently drops — realtime handles the common case. */
 const FALLBACK_POLL_MS = 20_000;
 
+const WORKSPACE_TABS = [
+  "overview",
+  "icp",
+  "activity",
+  "leads",
+  "outreach",
+] as const;
+
+function resolveTab(
+  value: string | undefined,
+): (typeof WORKSPACE_TABS)[number] {
+  return WORKSPACE_TABS.includes(value as (typeof WORKSPACE_TABS)[number])
+    ? (value as (typeof WORKSPACE_TABS)[number])
+    : "overview";
+}
+
 export function RunWorkspace(props: {
   run: RunRow;
   icpVersions: RunIcpRow[];
@@ -47,6 +63,7 @@ export function RunWorkspace(props: {
   events: RunEventRow[];
   toolCalls: ToolCallRow[];
   outreachDrafts: OutreachDraftRow[];
+  initialTab?: string;
 }) {
   const { run } = props;
   const router = useRouter();
@@ -90,7 +107,12 @@ export function RunWorkspace(props: {
       for (const table of REALTIME_RUN_ID_TABLES) {
         channel.on(
           "postgres_changes",
-          { event: "*", schema: "public", table, filter: `run_id=eq.${run.id}` },
+          {
+            event: "*",
+            schema: "public",
+            table,
+            filter: `run_id=eq.${run.id}`,
+          },
           scheduleRefresh,
         );
       }
@@ -134,7 +156,10 @@ export function RunWorkspace(props: {
         </div>
       </div>
 
-      <Tabs defaultValue="overview">
+      <Tabs
+        key={resolveTab(props.initialTab)}
+        defaultValue={resolveTab(props.initialTab)}
+      >
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="icp">ICP</TabsTrigger>
@@ -155,6 +180,8 @@ export function RunWorkspace(props: {
             run={run}
             companies={props.companies}
             leads={props.leads}
+            sourcesByCompany={props.sourcesByCompany}
+            hardFilters={props.approvedIcp?.criteria.hard_filters}
           />
         </TabsContent>
         <TabsContent value="icp">
@@ -172,6 +199,7 @@ export function RunWorkspace(props: {
             run={run}
             leads={props.leads}
             sourcesByCompany={props.sourcesByCompany}
+            hardFilters={props.approvedIcp?.criteria.hard_filters}
           />
         </TabsContent>
         <TabsContent value="outreach">

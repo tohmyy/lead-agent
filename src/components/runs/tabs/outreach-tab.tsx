@@ -56,6 +56,20 @@ function DraftEditor({
         onChange={(e) => setBody(e.target.value)}
         rows={5}
       />
+      {draft.personalization_context.claims.length > 0 ? (
+        <div>
+          <p className="mb-1 text-sm font-medium">Personalization claims</p>
+          <ul className="list-disc space-y-1 pl-5 text-sm">
+            {draft.personalization_context.claims.map((claim) => (
+              <li key={`${claim.source_id}:${claim.text}`}>{claim.text}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="text-muted-foreground text-sm">
+          No source-backed personalization claims were recorded for this draft.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         {dirty && (
           <Button
@@ -125,13 +139,23 @@ export function OutreachTab({
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button
           variant="outline"
           size="sm"
           nativeButton={false}
           render={
-            <a href={`/runs/${run.id}/export/leads.csv`}>Export leads CSV</a>
+            <a href={`/runs/${run.id}/export/leads.csv`}>Export approved CSV</a>
+          }
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={
+            <a href={`/runs/${run.id}/export/leads.csv?scope=all`}>
+              Export all qualified CSV
+            </a>
           }
         />
         <Button
@@ -140,7 +164,17 @@ export function OutreachTab({
           nativeButton={false}
           render={
             <a href={`/runs/${run.id}/export/outreach.md`}>
-              Export outreach pack
+              Export approved outreach
+            </a>
+          }
+        />
+        <Button
+          variant="outline"
+          size="sm"
+          nativeButton={false}
+          render={
+            <a href={`/runs/${run.id}/export/outreach.md?scope=all`}>
+              Export all outreach
             </a>
           }
         />
