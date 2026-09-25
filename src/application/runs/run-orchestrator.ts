@@ -1,6 +1,7 @@
 import "server-only";
 
 import { assertAgentTurnSucceeded, runAgentTurn } from "@/agents/agent-runtime";
+import { payableCost } from "@/domain/runs/spend";
 import { IcpService } from "@/application/icp/icp-service";
 import { latestOutreachDrafts } from "@/domain/outreach/outreach";
 import { LeadRepository } from "@/infrastructure/supabase/repositories/lead-repository";
@@ -77,6 +78,7 @@ export class RunOrchestrator {
           skills: ["icp-refinement"],
         },
       );
+      await this.recordAgentSpend(runId, result.totalCostUsd);
       assertAgentTurnSucceeded(result, "ICP refinement");
 
       const saved = await this.icps.getLatest(runId);
@@ -114,7 +116,7 @@ export class RunOrchestrator {
             "The ICP for this run has just been approved. Research and qualify companies:",
             "1. Call get_run_context to see the qualified_target and current counts.",
             "2. Call discover_companies for candidates matching the approved ICP.",
-            "3. For each newly discovered company: call research_website, then record_source for evidence worth keeping, then get_company_context, then save_lead with your qualification decision.",
+            "3. For each newly discovered company: call research_website, then record_source for evidence worth keeping, then get_company_context, then save_lead with your qualification decision. hard_filter_results must include one entry per approved hard filter, copying each filter string exactly, with result pass, fail, or unknown. Never mark a company qualified if any hard filter failed.",
             "4. Keep discovering/researching/qualifying more candidates until qualified_count reaches qualified_target, or a tool returns DISCOVERY_LIMIT_EXCEEDED / TARGET_ALREADY_REACHED and there are no more already-discovered, unqualified companies left to research.",
             "5. Do not generate outreach in this turn — that happens separately.",
           ].join("\n"),
@@ -123,6 +125,7 @@ export class RunOrchestrator {
           skills: ["lead-qualification", "lead-list-quality"],
         },
       );
+      await this.recordAgentSpend(runId, researchResult.totalCostUsd);
       assertAgentTurnSucceeded(researchResult, "research and qualification");
 
       const afterResearch = await this.runs.getOwnedRun(runId, userId);
@@ -176,6 +179,7 @@ export class RunOrchestrator {
             skills: ["outbound-copywriting", "lead-list-quality"],
           },
         );
+        await this.recordAgentSpend(runId, outreachResult.totalCostUsd);
         assertAgentTurnSucceeded(outreachResult, "outreach generation");
 
         // Mirrors refineIcp's post-condition check below: a turn can end
@@ -266,9 +270,7 @@ export class RunOrchestrator {
         issues.push(`${lead.company_name} has no outreach drafts`);
       } else {
         const emailSteps = new Set(
-          latestDrafts
-            .filter((d) => d.channel === "email")
-            .map((d) => d.step),
+          latestDrafts.filter((d) => d.channel === "email").map((d) => d.step),
         );
         const missingSteps = ([1, 2, 3] as const).filter(
           (s) => !emailSteps.has(s),
@@ -289,6 +291,12 @@ export class RunOrchestrator {
       }
     }
     return issues;
+  }
+
+  private async recordAgentSpend(runId: string, totalCostUsd: number) {
+    const agentUsd = payableCost(totalCostUsd);
+    if (agentUsd <= 0) return;
+    await this.runs.addCost(runId, { discoveryUsd: 0, agentUsd });
   }
 
   private async fail(

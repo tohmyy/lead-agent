@@ -94,6 +94,7 @@ function buildOrchestrator(opts: {
   const runsRepo = {
     getOwnedRun: vi.fn().mockResolvedValue(opts.run),
     transitionStatus,
+    addCost: vi.fn().mockResolvedValue(undefined),
   };
   const eventsRecord = vi.fn().mockResolvedValue(undefined);
   const eventsRepo = { record: eventsRecord };

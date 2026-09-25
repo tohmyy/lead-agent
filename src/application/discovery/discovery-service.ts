@@ -1,6 +1,7 @@
 import "server-only";
 
 import { AppError } from "@/domain/shared/errors";
+import { payableCost } from "@/domain/runs/spend";
 import { ApifyDiscoveryProvider } from "@/infrastructure/apify/apify-discovery-provider";
 import type { CompanyDiscoveryProvider } from "@/infrastructure/apify/discovery-provider";
 import { CompanyRepository } from "@/infrastructure/supabase/repositories/company-repository";
@@ -120,6 +121,11 @@ export class DiscoveryService {
       message: `Discovered ${persisted.length} new companies.`,
       metadata: { count: persisted.length },
     });
+
+    const discoveryUsd = payableCost(result.costUsd);
+    if (discoveryUsd > 0) {
+      await this.runs.addCost(runId, { discoveryUsd, agentUsd: 0 });
+    }
 
     return {
       companies: persisted,

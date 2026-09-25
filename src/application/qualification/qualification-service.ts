@@ -2,6 +2,7 @@ import "server-only";
 
 import { AppError } from "@/domain/shared/errors";
 import {
+  assertHardFilterResults,
   assertHardFiltersNotViolated,
   type SaveLeadInput,
 } from "@/domain/leads/lead";
@@ -105,6 +106,11 @@ export class QualificationService {
       approvedIcp.criteria,
       input.research_metadata,
     );
+    assertHardFilterResults({
+      status: input.qualification_status,
+      approvedFilters: approvedIcp.criteria.hard_filters,
+      results: input.hard_filter_results,
+    });
 
     const wasAlreadyQualified =
       (await this.leads.getByCompany(input.company_id, run.id))
