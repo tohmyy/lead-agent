@@ -102,7 +102,7 @@ export function NewRunForm({
               name="continueAnyway"
               value="1"
               variant="outline"
-              disabled={pending}
+              loading={pending}
             >
               Continue anyway
             </Button>
@@ -110,8 +110,8 @@ export function NewRunForm({
         </div>
       )}
 
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? "Creating…" : "Create Research Run"}
+      <Button type="submit" loading={pending} className="w-full">
+        Create Research Run
       </Button>
     </form>
   );

@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Lead Research Agent",
+  title: { default: "Mélange", template: "%s · Mélange" },
   description:
     "AI-assisted lead research, qualification, and outreach drafting for Koya Talent.",
 };

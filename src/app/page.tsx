@@ -48,6 +48,43 @@ function matchesFilter(run: RunRow, filter: string): boolean {
   return run.status === filter;
 }
 
+const FILTER_VARIANT_CLASS: Record<
+  "primary" | "destructive" | "outline" | "success" | "warning" | "info",
+  { active: string; inactive: string }
+> = {
+  primary: {
+    active: "bg-primary text-primary-foreground border-primary",
+    inactive: "bg-primary/10 text-primary border-primary/30",
+  },
+  destructive: {
+    active: "bg-destructive text-white border-destructive",
+    inactive: "bg-destructive/10 text-destructive border-destructive/30",
+  },
+  outline: {
+    active: "bg-foreground text-background border-foreground",
+    inactive: "text-muted-foreground hover:bg-accent",
+  },
+  success: {
+    active: "bg-success text-success-foreground border-success",
+    inactive: "bg-success/10 text-success border-success/30",
+  },
+  warning: {
+    active: "bg-warning text-warning-foreground border-warning",
+    inactive: "bg-warning/15 text-warning-foreground border-warning/30",
+  },
+  info: {
+    active: "bg-info text-info-foreground border-info",
+    inactive: "bg-info/10 text-info border-info/30",
+  },
+};
+
+function filterVariant(value: RunStatus | "active" | "all") {
+  if (value === "all") return "primary" as const;
+  if (value === "active") return "info" as const;
+  const variant = STATUS_DISPLAY[value].variant;
+  return variant === "secondary" ? ("outline" as const) : variant;
+}
+
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -90,13 +127,26 @@ export default async function DashboardPage({
 
       {allRuns.length > 0 && (
         <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          <SummaryStat label="Runs" value={String(allRuns.length)} />
-          <SummaryStat label="In progress" value={String(inProgress)} />
-          <SummaryStat label="Awaiting review" value={String(awaitingReview)} />
-          <SummaryStat label="Qualified leads" value={String(qualifiedLeads)} />
+          <SummaryStat label="Runs" value={String(allRuns.length)} accent="chart-1" />
+          <SummaryStat
+            label="In progress"
+            value={String(inProgress)}
+            accent="info"
+          />
+          <SummaryStat
+            label="Awaiting review"
+            value={String(awaitingReview)}
+            accent="warning"
+          />
+          <SummaryStat
+            label="Qualified leads"
+            value={String(qualifiedLeads)}
+            accent="success"
+          />
           <SummaryStat
             label="Companies discovered"
             value={String(companiesDiscovered)}
+            accent="chart-2"
           />
           <SummaryStat label="Recorded spend" value={formatUsd(totalSpend)} />
         </div>
@@ -119,20 +169,22 @@ export default async function DashboardPage({
 
       {allRuns.length > 0 && (
         <div className="mb-6 flex flex-wrap gap-2">
-          {STATUS_FILTERS.map((f) => (
-            <Link
-              key={f.value}
-              href={f.value === "all" ? "/" : `/?status=${f.value}`}
-              className={cn(
-                "rounded-full border px-3 py-1 text-sm transition-colors",
-                activeFilter === f.value
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "text-muted-foreground hover:bg-accent",
-              )}
-            >
-              {f.label}
-            </Link>
-          ))}
+          {STATUS_FILTERS.map((f) => {
+            const isActive = activeFilter === f.value;
+            const classes = FILTER_VARIANT_CLASS[filterVariant(f.value)];
+            return (
+              <Link
+                key={f.value}
+                href={f.value === "all" ? "/" : `/?status=${f.value}`}
+                className={cn(
+                  "rounded-full border px-3 py-1 text-sm transition-colors",
+                  isActive ? classes.active : classes.inactive,
+                )}
+              >
+                {f.label}
+              </Link>
+            );
+          })}
         </div>
       )}
 
@@ -190,9 +242,25 @@ export default async function DashboardPage({
   );
 }
 
-function SummaryStat({ label, value }: { label: string; value: string }) {
+const ACCENT_BORDER_CLASS = {
+  info: "border-t-info",
+  warning: "border-t-warning",
+  success: "border-t-success",
+  "chart-1": "border-t-chart-1",
+  "chart-2": "border-t-chart-2",
+} as const;
+
+function SummaryStat({
+  label,
+  value,
+  accent,
+}: {
+  label: string;
+  value: string;
+  accent?: keyof typeof ACCENT_BORDER_CLASS;
+}) {
   return (
-    <Card>
+    <Card className={cn("border-t-2", accent && ACCENT_BORDER_CLASS[accent])}>
       <CardContent className="py-4">
         <p className="text-xl font-semibold tabular-nums">{value}</p>
         <p className="text-muted-foreground text-xs">{label}</p>
