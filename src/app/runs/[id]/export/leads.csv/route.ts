@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 
 import { RunService } from "@/application/runs/run-service";
+import { leadsForExport, parseExportScope } from "@/domain/outreach/outreach";
 import { AppError } from "@/domain/shared/errors";
 import { LeadRepository } from "@/infrastructure/supabase/repositories/lead-repository";
+import { OutreachRepository } from "@/infrastructure/supabase/repositories/outreach-repository";
 import { SourceRepository } from "@/infrastructure/supabase/repositories/source-repository";
 import { requireCurrentUserId } from "@/lib/auth/current-user";
 
 const runService = new RunService();
 const leadRepo = new LeadRepository();
 const sourceRepo = new SourceRepository();
+const outreachRepo = new OutreachRepository();
 
 function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
@@ -16,19 +19,23 @@ function csvCell(value: string): string {
 
 /** Qualified-lead CSV export — fields per UI-SPEC.md section 26. */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const scope = parseExportScope(
+    new URL(request.url).searchParams.get("scope"),
+  );
 
   try {
     const userId = await requireCurrentUserId();
     const run = await runService.getOwnedRun(id, userId);
-    const leads = await leadRepo.listForRun(id);
+    const [leads, drafts] = await Promise.all([
+      leadRepo.listForRun(id),
+      outreachRepo.listForRun(id),
+    ]);
 
-    const qualified = leads.filter(
-      (l) => l.qualification_status === "qualified",
-    );
+    const qualified = leadsForExport(leads, drafts, scope);
 
     const header = [
       "company_name",

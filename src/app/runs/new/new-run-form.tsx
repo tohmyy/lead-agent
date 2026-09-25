@@ -1,19 +1,26 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 
 import { createRun, type RunFormState } from "@/app/actions/runs";
+import { RunStatusBadge } from "@/components/runs/run-status-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDateTime } from "@/lib/format-date";
 
 const initialState: RunFormState = {};
 
 export function NewRunForm({
   defaultDiscoveryLimit,
+  discoveryConfigured,
+  websiteResearchConfigured,
 }: {
   defaultDiscoveryLimit: number;
+  discoveryConfigured: boolean;
+  websiteResearchConfigured: boolean;
 }) {
   const [state, formAction, pending] = useActionState(createRun, initialState);
 
@@ -64,7 +71,44 @@ export function NewRunForm({
         </div>
       </div>
 
+      <p className="text-muted-foreground text-sm">
+        Company discovery is{" "}
+        {discoveryConfigured ? "configured" : "not configured"}. Website
+        research is{" "}
+        {websiteResearchConfigured ? "configured" : "not configured"}.
+      </p>
+
       {state.error && <p className="text-destructive text-sm">{state.error}</p>}
+
+      {state.duplicate && (
+        <div className="space-y-3 rounded-lg border p-4">
+          <p className="font-medium">You&apos;ve run this objective before</p>
+          <p className="text-muted-foreground text-sm">
+            {state.duplicate.qualifiedCount} / {state.duplicate.qualifiedTarget}{" "}
+            qualified · {formatDateTime(state.duplicate.createdAt)}
+          </p>
+          <RunStatusBadge status={state.duplicate.status} />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              nativeButton={false}
+              render={
+                <Link href={`/runs/${state.duplicate.id}`}>
+                  View existing run
+                </Link>
+              }
+            />
+            <Button
+              type="submit"
+              name="continueAnyway"
+              value="1"
+              variant="outline"
+              disabled={pending}
+            >
+              Continue anyway
+            </Button>
+          </div>
+        </div>
+      )}
 
       <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Creating…" : "Create Research Run"}

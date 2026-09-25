@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 
 import { IcpService } from "@/application/icp/icp-service";
 import { RunService } from "@/application/runs/run-service";
-import { latestOutreachDrafts } from "@/domain/outreach/outreach";
+import {
+  draftsForExport,
+  leadsForExport,
+  parseExportScope,
+} from "@/domain/outreach/outreach";
 import { AppError } from "@/domain/shared/errors";
 import { LeadRepository } from "@/infrastructure/supabase/repositories/lead-repository";
 import { OutreachRepository } from "@/infrastructure/supabase/repositories/outreach-repository";
@@ -15,27 +19,29 @@ const outreachRepo = new OutreachRepository();
 
 /** Human-readable outreach sample pack — content per UI-SPEC.md section 26 / PRD.md deliverables. */
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const scope = parseExportScope(
+    new URL(request.url).searchParams.get("scope"),
+  );
 
   try {
     const userId = await requireCurrentUserId();
     const run = await runService.getOwnedRun(id, userId);
-    const [approvedIcp, leads] = await Promise.all([
+    const [approvedIcp, leads, drafts] = await Promise.all([
       icpService.getApproved(id),
       leadRepo.listForRun(id),
+      outreachRepo.listForRun(id),
     ]);
 
-    const qualified = leads.filter(
-      (l) => l.qualification_status === "qualified",
-    );
+    const qualified = leadsForExport(leads, drafts, scope);
 
     const sections = await Promise.all(
       qualified.map(async (lead) => {
-        const drafts = await outreachRepo.listForLead(lead.id);
-        const latest = latestOutreachDrafts(drafts);
+        const leadDrafts = drafts.filter((draft) => draft.lead_id === lead.id);
+        const latest = draftsForExport(leadDrafts, scope);
         const latestByKey = new Map(
           latest.map((d) => [`${d.channel}:${d.step ?? "linkedin"}`, d]),
         );
@@ -48,6 +54,13 @@ export async function GET(
 
         const linkedin = latestByKey.get("linkedin:linkedin");
 
+        const fitReasons = lead.fit_reasons
+          .map((r) => `- ${r.reason}`)
+          .join("\n");
+        const concerns = lead.concerns
+          .map((c) => `- ${c.concern} (${c.severity})`)
+          .join("\n");
+
         return [
           `## ${lead.company_name} (${lead.domain})`,
           "",
@@ -55,6 +68,8 @@ export async function GET(
           "",
           `**Source context:** ${lead.source_summary}`,
           "",
+          fitReasons ? `**Fit reasons:**\n${fitReasons}` : "",
+          concerns ? `**Concerns:**\n${concerns}` : "",
           emailSections,
           linkedin ? `**LinkedIn message**\n\n${linkedin.body}` : "",
         ]

@@ -6,8 +6,9 @@ import { redirect } from "next/navigation";
 import { IcpService } from "@/application/icp/icp-service";
 import { RunOrchestrator } from "@/application/runs/run-orchestrator";
 import { RunService } from "@/application/runs/run-service";
-import { createRunInputSchema } from "@/domain/runs/run";
+import { createRunInputSchema, resolveCreateDecision } from "@/domain/runs/run";
 import type { IcpCriteriaInput } from "@/domain/icp/icp";
+import type { RunStatus } from "@/infrastructure/supabase/types";
 import { requireCurrentUserId } from "@/lib/auth/current-user";
 import { getServerEnv } from "@/lib/config/env";
 import { log } from "@/lib/logging/logger";
@@ -16,8 +17,17 @@ const runService = new RunService();
 const icpService = new IcpService();
 const orchestrator = new RunOrchestrator();
 
+export interface DuplicateRunNotice {
+  id: string;
+  status: RunStatus;
+  qualifiedCount: number;
+  qualifiedTarget: number;
+  createdAt: string;
+}
+
 export interface RunFormState {
   error?: string;
+  duplicate?: DuplicateRunNotice;
 }
 
 /**
@@ -47,12 +57,33 @@ export async function createRun(
     objective: String(formData.get("objective") ?? ""),
     qualifiedTarget: Number(formData.get("qualifiedTarget") ?? 10),
     discoveryLimit: Number(
-      formData.get("discoveryLimit") ??
-        getServerEnv().DEFAULT_DISCOVERY_LIMIT,
+      formData.get("discoveryLimit") ?? getServerEnv().DEFAULT_DISCOVERY_LIMIT,
     ),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+
+  const continueAnyway = formData.get("continueAnyway") === "1";
+  const existing = await runService.listRunsForUser(userId);
+  const decision = resolveCreateDecision({
+    continueAnyway,
+    existing,
+    objective: parsed.data.objective,
+  });
+  if (decision.action === "block") {
+    const match = existing.find((run) => run.id === decision.matchId);
+    if (match) {
+      return {
+        duplicate: {
+          id: match.id,
+          status: match.status,
+          qualifiedCount: match.qualified_count,
+          qualifiedTarget: match.qualified_target,
+          createdAt: match.created_at,
+        },
+      };
+    }
   }
 
   const run = await runService.createRun(userId, parsed.data);

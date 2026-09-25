@@ -28,10 +28,13 @@ const toolCalls = new ToolCallRepository();
 
 export default async function RunDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab } = await searchParams;
   const userId = await requireCurrentUserId();
 
   let run;
@@ -85,6 +88,7 @@ export default async function RunDetailPage({
         events={runEvents}
         toolCalls={runToolCalls}
         outreachDrafts={runOutreach}
+        initialTab={tab}
       />
     </AppShell>
   );
