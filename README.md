@@ -2,6 +2,8 @@
 
 A Next.js application where a user submits a lead-qualification objective, Claude (via the [Claude Agent SDK](https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk)) refines it into an ICP, a human approves it, the agent discovers candidate companies through Apify, researches their websites through Firecrawl, qualifies them against the ICP with evidence, and drafts — but never sends — a 3-step email sequence and LinkedIn message for each qualified lead. Supabase is the audit trail throughout.
 
+**One-pager (how it works & how to use it):** [`docs/ONE-PAGER.md`](docs/ONE-PAGER.md)
+
 See `docs/` for the full spec set (PRD, UI spec, data model, architecture, tool contracts, build plan, test plan, agent instructions) and `C:\Users\TF\.claude\plans\initialize-and-build-with-deep-glade.md` for the implementation plan this build followed, including how conflicts between the spec documents were resolved.
 
 ## Stack
