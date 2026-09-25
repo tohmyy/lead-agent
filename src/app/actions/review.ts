@@ -34,6 +34,20 @@ export async function setLeadReviewState(
   revalidatePath(`/runs/${runId}`);
 }
 
+export async function saveLeadNote(
+  runId: string,
+  leadId: string,
+  note: string,
+): Promise<void> {
+  await assertOwnsRun(runId);
+  await leads.updateOperatorNote(
+    leadId,
+    runId,
+    note.trim() === "" ? null : note,
+  );
+  revalidatePath(`/runs/${runId}`);
+}
+
 export async function updateOutreachDraft(
   runId: string,
   draftId: string,

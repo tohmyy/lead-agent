@@ -30,6 +30,7 @@ Call `save_lead` with:
 - `qualification_reasoning`: plain-language explanation of the decision.
 - `source_summary`: concise summary of what the evidence actually showed.
 - `hard_filter_results`: one entry for every approved hard filter. Copy each filter string exactly from `get_run_context`. Set `result` to `pass`, `fail`, or `unknown`, and add `evidence` when a recorded source supports the verdict. If any result is `fail`, `qualification_status` must not be `qualified`.
+- `research_metadata` (optional): record `employee_count`, `industry`, and `location` only when a recorded source actually states them — omit any field you can't support with evidence rather than guessing. This is separate from `hard_filter_results`; it doesn't affect qualification on its own, but the employee-range hard filter is checked against `employee_count` deterministically when you provide it.
 
 ## Rules
 

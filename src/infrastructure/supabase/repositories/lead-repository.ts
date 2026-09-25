@@ -129,4 +129,24 @@ export class LeadRepository {
       throw new AppError("LEAD_NOT_FOUND", "Lead not found for this run.");
     return data;
   }
+
+  async updateOperatorNote(
+    leadId: string,
+    runId: string,
+    note: string | null,
+  ): Promise<LeadRow> {
+    const { data, error } = await this.db
+      .from("leads")
+      .update({ operator_note: note })
+      .eq("id", leadId)
+      .eq("run_id", runId)
+      .select()
+      .maybeSingle();
+
+    if (error)
+      throw new AppError("DATABASE_ERROR", "Failed to update lead note.");
+    if (!data)
+      throw new AppError("LEAD_NOT_FOUND", "Lead not found for this run.");
+    return data;
+  }
 }

@@ -8,6 +8,7 @@ import {
 } from "@/components/runs/run-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { isRunActive } from "@/domain/runs/run";
 import type { RunRow, RunStatus } from "@/infrastructure/supabase/types";
 import { requireCurrentUserId } from "@/lib/auth/current-user";
@@ -50,13 +51,16 @@ function matchesFilter(run: RunRow, filter: string): boolean {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const userId = await requireCurrentUserId();
   const allRuns = await runService.listRunsForUser(userId);
-  const { status } = await searchParams;
+  const { status, q } = await searchParams;
   const activeFilter = status ?? "all";
-  const runs = allRuns.filter((run) => matchesFilter(run, activeFilter));
+  const query = (q ?? "").trim().toLowerCase();
+  const runs = allRuns
+    .filter((run) => matchesFilter(run, activeFilter))
+    .filter((run) => !query || run.objective.toLowerCase().includes(query));
   const inProgress = allRuns.filter((run) => isRunActive(run.status)).length;
   const awaitingReview = allRuns.filter(
     (run) => run.status === "awaiting_review",
@@ -96,6 +100,21 @@ export default async function DashboardPage({
           />
           <SummaryStat label="Recorded spend" value={formatUsd(totalSpend)} />
         </div>
+      )}
+
+      {allRuns.length > 0 && (
+        <form method="get" className="mb-4">
+          {activeFilter !== "all" && (
+            <input type="hidden" name="status" value={activeFilter} />
+          )}
+          <Input
+            type="search"
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search by objective"
+            className="max-w-sm"
+          />
+        </form>
       )}
 
       {allRuns.length > 0 && (

@@ -162,6 +162,7 @@ export type LeadRow = {
   source_summary: string;
   research_metadata: Record<string, unknown> | null;
   review_state: ReviewState;
+  operator_note: string | null;
   qualified_at: string | null;
   created_at: string;
   updated_at: string;
@@ -273,6 +274,7 @@ type LeadInsert = Optional<
   | "hard_filter_results"
   | "research_metadata"
   | "review_state"
+  | "operator_note"
   | "qualified_at"
   | "created_at"
   | "updated_at"
