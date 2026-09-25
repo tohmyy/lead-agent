@@ -74,6 +74,17 @@ export function RunWorkspace(props: {
   const [activeTab, setActiveTab] = useState<(typeof WORKSPACE_TABS)[number]>(
     () => resolveTab(props.initialTab),
   );
+  // A "?tab=" navigation (e.g. the Overview tab's "Review leads" link) gives
+  // this already-mounted component a new `initialTab` prop, but the above
+  // `useState` initializer only runs once on mount. Re-sync during render
+  // (not an effect, to avoid a set-state-in-effect lint violation) whenever
+  // the raw prop itself changes, so a fresh navigation is honored while a
+  // later manual tab click (which never touches `initialTab`) isn't undone.
+  const [syncedInitialTab, setSyncedInitialTab] = useState(props.initialTab);
+  if (props.initialTab !== syncedInitialTab) {
+    setSyncedInitialTab(props.initialTab);
+    setActiveTab(resolveTab(props.initialTab));
+  }
   const [outreachLeadId, setOutreachLeadId] = useState<string | null>(null);
 
   function viewOutreachFor(leadId: string) {

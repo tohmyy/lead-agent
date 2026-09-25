@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/layout/logo";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { signOut } from "@/app/login/actions";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -12,11 +13,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/" className="flex items-center gap-2">
             <Logo />
           </Link>
-          <form action={signOut}>
-            <Button type="submit" variant="ghost" size="sm">
-              Sign out
-            </Button>
-          </form>
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <form action={signOut}>
+              <Button type="submit" variant="ghost" size="sm">
+                Sign out
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-8 py-8">

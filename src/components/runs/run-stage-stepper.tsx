@@ -37,25 +37,24 @@ export function RunStageStepper({
               aria-current={isCurrent ? "step" : undefined}
               className="flex flex-1 items-center gap-1.5 last:flex-none"
             >
-              <span className="relative flex shrink-0 items-center justify-center">
-                <span
-                  aria-hidden
-                  className={cn(
-                    "size-2.5 rounded-full border-2",
-                    isDone && "bg-success border-success",
-                    isCurrent &&
-                      (attention
-                        ? "bg-warning border-warning size-3"
-                        : "bg-info border-info size-3"),
-                    status === "upcoming" && "bg-background border-border",
-                  )}
-                />
-                {isCurrent && active && (
+              <span className="flex size-3 shrink-0 items-center justify-center">
+                {isCurrent && active ? (
                   <Spinner
                     size="xs"
+                    className={attention ? "text-warning" : "text-info"}
+                  />
+                ) : (
+                  <span
+                    aria-hidden
                     className={cn(
-                      "absolute -inset-1",
-                      attention ? "text-warning" : "text-info",
+                      "rounded-full border-2",
+                      isDone && "size-2.5 bg-success border-success",
+                      isCurrent &&
+                        (attention
+                          ? "size-3 bg-warning border-warning"
+                          : "size-3 bg-info border-info"),
+                      status === "upcoming" &&
+                        "size-2.5 bg-background border-border",
                     )}
                   />
                 )}

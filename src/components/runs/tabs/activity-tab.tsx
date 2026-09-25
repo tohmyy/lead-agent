@@ -91,11 +91,14 @@ export function ActivityTab({
     );
   }
 
+  const orderedEvents = [...events].reverse();
+  const orderedToolCalls = [...toolCalls].reverse();
+
   return (
     <div className="space-y-6">
       <Card>
         <CardContent className="divide-y py-0">
-          {events.map((event) => {
+          {orderedEvents.map((event) => {
             const actor = eventActor(event.event_type);
             const { icon: Icon, className } =
               EVENT_ICON[event.event_type] ?? DEFAULT_EVENT_ICON;
@@ -129,7 +132,7 @@ export function ActivityTab({
           Tool call log ({toolCalls.length})
         </summary>
         <div className="divide-y border-t">
-          {toolCalls.map((call) => (
+          {orderedToolCalls.map((call) => (
             <details key={call.id} className="px-4 py-3 text-sm">
               <summary className="cursor-pointer list-none select-none">
                 <div className="flex items-center justify-between">
