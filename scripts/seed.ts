@@ -162,6 +162,23 @@ async function main() {
           source_ids: [source.id],
         },
       ],
+      hard_filter_results: [
+        {
+          filter: "US-based",
+          result: "pass",
+          evidence: "Company website describes a US customer base.",
+        },
+        {
+          filter: "B2B SaaS",
+          result: "pass",
+          evidence: "Product page describes a SaaS platform for business teams.",
+        },
+        {
+          filter: "10-100 employees",
+          result: "pass",
+          evidence: "Company appears to have approximately 45 employees.",
+        },
+      ],
       qualification_reasoning:
         "Company matches all hard filters (US, B2B, SaaS, 10-100 employees) and shows evidence of operational workflows relevant to automation.",
       source_summary:

@@ -21,7 +21,7 @@ export function createSaveLeadTool(ctx: ToolContext) {
   return defineRunTool({
     name: "save_lead",
     description:
-      "Persists your qualification decision for a discovered company against the approved ICP. qualification_status must be 'qualified', 'not_qualified', or 'needs_review' (use needs_review when evidence is genuinely insufficient for a confident decision — do not force a binary call). Every fit_reason and concern must cite the source_ids of evidence actually recorded via record_source; do not cite a source that wasn't recorded. confidence_score (0-100) reflects confidence in THIS ASSESSMENT, not sales priority or likelihood to convert.",
+      "Persists your qualification decision for a discovered company against the approved ICP. qualification_status must be 'qualified', 'not_qualified', or 'needs_review' (use needs_review when evidence is genuinely insufficient for a confident decision — do not force a binary call). Every fit_reason and concern must cite the source_ids of evidence actually recorded via record_source; do not cite a source that wasn't recorded. hard_filter_results must contain one object per approved hard filter, copying the filter text exactly from get_run_context, with result 'pass', 'fail', or 'unknown'. A company with any 'fail' cannot be saved as qualified. confidence_score (0-100) reflects confidence in THIS ASSESSMENT, not sales priority or likelihood to convert.",
     shape: saveLeadInputSchema.shape,
     outputSchema: saveLeadOutputSchema,
     purpose: "Save lead qualification decision.",

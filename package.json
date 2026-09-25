@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest run src",
     "test:e2e": "playwright test",
+    "evidence:screenshots": "playwright test tests/e2e/capture-evidence-screenshots.spec.ts",
     "db:migrate": "tsx scripts/run-migrations.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:verify-rls": "tsx scripts/verify-rls.ts"

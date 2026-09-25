@@ -723,8 +723,16 @@ Persist the agent's qualification assessment.
   qualification_reasoning: string;
 
   source_summary: string;
+
+  hard_filter_results: Array<{
+    filter: string;
+    result: "pass" | "fail" | "unknown";
+    evidence?: string;
+  }>;
 }
 ```
+
+`hard_filter_results` must include one entry per approved hard filter, using that filter's text exactly. A `fail` cannot be stored with `qualification_status: "qualified"`.
 
 ---
 

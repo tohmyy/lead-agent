@@ -29,6 +29,7 @@ Call `save_lead` with:
 - `fit_reasons` / `concerns`: each entry must cite the `source_ids` of evidence you actually recorded via `record_source`. Never cite a source you didn't record.
 - `qualification_reasoning`: plain-language explanation of the decision.
 - `source_summary`: concise summary of what the evidence actually showed.
+- `hard_filter_results`: one entry for every approved hard filter. Copy each filter string exactly from `get_run_context`. Set `result` to `pass`, `fail`, or `unknown`, and add `evidence` when a recorded source supports the verdict. If any result is `fail`, `qualification_status` must not be `qualified`.
 
 ## Rules
 
