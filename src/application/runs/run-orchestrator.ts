@@ -3,12 +3,15 @@ import "server-only";
 import { assertAgentTurnSucceeded, runAgentTurn } from "@/agents/agent-runtime";
 import { payableCost } from "@/domain/runs/spend";
 import { IcpService } from "@/application/icp/icp-service";
+import { NotificationService } from "@/application/notifications/notification-service";
 import { latestOutreachDrafts } from "@/domain/outreach/outreach";
 import { LeadRepository } from "@/infrastructure/supabase/repositories/lead-repository";
 import { OutreachRepository } from "@/infrastructure/supabase/repositories/outreach-repository";
 import { RunEventRepository } from "@/infrastructure/supabase/repositories/run-event-repository";
 import { RunRepository } from "@/infrastructure/supabase/repositories/run-repository";
 import { SourceRepository } from "@/infrastructure/supabase/repositories/source-repository";
+import { log } from "@/lib/logging/logger";
+import type { RunRow } from "@/infrastructure/supabase/types";
 
 const MAX_TURNS_ICP = 8;
 const MAX_BUDGET_ICP_USD = 0.5;
@@ -42,6 +45,7 @@ export class RunOrchestrator {
     private readonly outreach = new OutreachRepository(),
     private readonly leads = new LeadRepository(),
     private readonly sources = new SourceRepository(),
+    private readonly notifications = new NotificationService(),
   ) {}
 
   /**
@@ -90,10 +94,11 @@ export class RunOrchestrator {
         .getOwnedRun(runId, userId)
         .catch(() => null);
       if (current && current.status === "awaiting_icp_approval") {
-        await this.fail(
-          runId,
-          "awaiting_icp_approval",
-          errorMessage(err, "ICP refinement failed."),
+        await this.fail(current, errorMessage(err, "ICP refinement failed."));
+      } else {
+        log.warn(
+          "[orchestrator] run already left expected state, skipping fail()",
+          { runId, status: current?.status ?? "unknown (re-fetch failed)" },
         );
       }
     }
@@ -224,10 +229,11 @@ export class RunOrchestrator {
         (current.status === "researching" ||
           current.status === "generating_outreach")
       ) {
-        await this.fail(
-          runId,
-          current.status,
-          errorMessage(err, "Run failed during research."),
+        await this.fail(current, errorMessage(err, "Run failed during research."));
+      } else {
+        log.warn(
+          "[orchestrator] run already left expected state, skipping fail()",
+          { runId, status: current?.status ?? "unknown (re-fetch failed)" },
         );
       }
     }
@@ -299,16 +305,29 @@ export class RunOrchestrator {
     await this.runs.addCost(runId, { discoveryUsd: 0, agentUsd });
   }
 
-  private async fail(
-    runId: string,
-    from: Parameters<RunRepository["transitionStatus"]>[1],
-    message: string,
-  ) {
-    await this.runs.transitionStatus(runId, from, "failed", {
+  private async fail(run: RunRow, message: string) {
+    await this.runs.transitionStatus(run.id, run.status, "failed", {
       error_message: message,
       completed_at: new Date().toISOString(),
     });
-    await this.events.record({ runId, eventType: "run_failed", message });
+    await this.events.record({ runId: run.id, eventType: "run_failed", message });
+
+    try {
+      await this.notifications.notifyRunFailed({
+        runId: run.id,
+        userId: run.user_id,
+        objective: run.objective,
+        message,
+      });
+    } catch (err) {
+      // notifyRunFailed already guarantees it never throws; this catch is
+      // pure defense-in-depth so a bug there can never prevent the failure
+      // recording above (which has already completed by this point).
+      log.error("[orchestrator:fail] notification side-effect failed", {
+        runId: run.id,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 }
 
