@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { AppError } from "@/domain/shared/errors";
+import type { OutreachDraftRow } from "@/infrastructure/supabase/types";
 
 const personalizationClaimSchema = z.object({
   text: z.string().min(1),
@@ -45,6 +46,28 @@ export type SaveOutreachDraftInput = z.infer<
  * recorded for this company (UI-SPEC #24: "If an outreach claim has no
  * supporting source context, it should not be generated.").
  */
+/**
+ * Outreach drafts are versioned, not overwritten (OutreachRepository.
+ * createDraft: "a regenerate creates the next version for the same
+ * (lead_id, channel, step) rather than mutating a reviewed draft"). Any
+ * code that displays, checks, or exports drafts must dedupe to the latest
+ * version per (channel, step) first, or it risks acting on a stale draft
+ * while a newer, unreviewed version silently exists alongside it.
+ */
+export function latestOutreachDrafts(
+  drafts: OutreachDraftRow[],
+): OutreachDraftRow[] {
+  const latest = new Map<string, OutreachDraftRow>();
+  for (const draft of drafts) {
+    const key = `${draft.channel}:${draft.step ?? "linkedin"}`;
+    const existing = latest.get(key);
+    if (!existing || draft.version > existing.version) {
+      latest.set(key, draft);
+    }
+  }
+  return Array.from(latest.values());
+}
+
 export function assertClaimsReferenceKnownSources(
   claims: { source_id: string }[],
   knownSourceIds: ReadonlySet<string>,

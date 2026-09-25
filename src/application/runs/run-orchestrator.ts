@@ -2,6 +2,7 @@ import "server-only";
 
 import { assertAgentTurnSucceeded, runAgentTurn } from "@/agents/agent-runtime";
 import { IcpService } from "@/application/icp/icp-service";
+import { latestOutreachDrafts } from "@/domain/outreach/outreach";
 import { LeadRepository } from "@/infrastructure/supabase/repositories/lead-repository";
 import { OutreachRepository } from "@/infrastructure/supabase/repositories/outreach-repository";
 import { RunEventRepository } from "@/infrastructure/supabase/repositories/run-event-repository";
@@ -234,8 +235,38 @@ export class RunOrchestrator {
       if (sources.length === 0) {
         issues.push(`${lead.company_name} has no recorded evidence sources`);
       }
-      if (drafts.length === 0) {
+
+      // The 3-email-steps + 1-LinkedIn shape (BUILD-PLAN.md section 33) is
+      // only ever enforced by prompt instruction, not by anything the
+      // agent's tool calls are forced to satisfy — verify it actually
+      // happened rather than trusting the agent's own count. Dedupe first:
+      // save_outreach_draft always inserts a new version rather than
+      // updating in place, so raw drafts.length can overcount.
+      const latestDrafts = latestOutreachDrafts(drafts);
+      if (latestDrafts.length === 0) {
         issues.push(`${lead.company_name} has no outreach drafts`);
+      } else {
+        const emailSteps = new Set(
+          latestDrafts
+            .filter((d) => d.channel === "email")
+            .map((d) => d.step),
+        );
+        const missingSteps = ([1, 2, 3] as const).filter(
+          (s) => !emailSteps.has(s),
+        );
+        if (missingSteps.length > 0) {
+          issues.push(
+            `${lead.company_name} is missing email step(s) ${missingSteps.join(", ")}`,
+          );
+        }
+        const linkedinCount = latestDrafts.filter(
+          (d) => d.channel === "linkedin",
+        ).length;
+        if (linkedinCount !== 1) {
+          issues.push(
+            `${lead.company_name} has ${linkedinCount} LinkedIn draft(s) (expected 1)`,
+          );
+        }
       }
     }
     return issues;

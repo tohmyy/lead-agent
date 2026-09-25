@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { AppError } from "@/domain/shared/errors";
+import type { OutreachDraftRow } from "@/infrastructure/supabase/types";
 import {
   assertClaimsReferenceKnownSources,
+  latestOutreachDrafts,
   saveOutreachDraftInputSchema,
 } from "./outreach";
 
@@ -90,5 +92,66 @@ describe("assertClaimsReferenceKnownSources", () => {
         knownSourceIds,
       ),
     ).toThrow(AppError);
+  });
+});
+
+describe("latestOutreachDrafts", () => {
+  function draft(
+    overrides: Partial<OutreachDraftRow> & Pick<OutreachDraftRow, "version">,
+  ): OutreachDraftRow {
+    return {
+      id: `id-${Math.random()}`,
+      lead_id: "lead-1",
+      run_id: "run-1",
+      channel: "email",
+      step: 1,
+      subject: "Subject",
+      body: "Body",
+      personalization_context: { claims: [] },
+      review_state: "not_reviewed",
+      created_at: "2026-01-01T00:00:00.000Z",
+      updated_at: "2026-01-01T00:00:00.000Z",
+      ...overrides,
+    };
+  }
+
+  it("keeps only the highest version per (channel, step)", () => {
+    const drafts = [
+      draft({ id: "e1-v1", channel: "email", step: 1, version: 1 }),
+      draft({ id: "e1-v2", channel: "email", step: 1, version: 2 }),
+      draft({ id: "e2-v1", channel: "email", step: 2, version: 1 }),
+      draft({
+        id: "li-v1",
+        channel: "linkedin",
+        step: null,
+        subject: null,
+        version: 1,
+      }),
+    ];
+
+    const result = latestOutreachDrafts(drafts);
+
+    expect(result).toHaveLength(3);
+    expect(result.find((d) => d.channel === "email" && d.step === 1)?.id).toBe(
+      "e1-v2",
+    );
+    expect(result.find((d) => d.channel === "email" && d.step === 2)?.id).toBe(
+      "e2-v1",
+    );
+    expect(result.find((d) => d.channel === "linkedin")?.id).toBe("li-v1");
+  });
+
+  it("does not confuse LinkedIn drafts with email drafts that have no step", () => {
+    const drafts = [
+      draft({
+        id: "li-v1",
+        channel: "linkedin",
+        step: null,
+        subject: null,
+        version: 1,
+      }),
+      draft({ id: "e1-v1", channel: "email", step: 1, version: 1 }),
+    ];
+    expect(latestOutreachDrafts(drafts)).toHaveLength(2);
   });
 });

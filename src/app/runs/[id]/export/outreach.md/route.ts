@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { IcpService } from "@/application/icp/icp-service";
 import { RunService } from "@/application/runs/run-service";
+import { latestOutreachDrafts } from "@/domain/outreach/outreach";
 import { AppError } from "@/domain/shared/errors";
 import { LeadRepository } from "@/infrastructure/supabase/repositories/lead-repository";
 import { OutreachRepository } from "@/infrastructure/supabase/repositories/outreach-repository";
@@ -34,13 +35,10 @@ export async function GET(
     const sections = await Promise.all(
       qualified.map(async (lead) => {
         const drafts = await outreachRepo.listForLead(lead.id);
-        const latestByKey = new Map<string, (typeof drafts)[number]>();
-        for (const d of drafts) {
-          const key = `${d.channel}:${d.step ?? "linkedin"}`;
-          const existing = latestByKey.get(key);
-          if (!existing || d.version > existing.version)
-            latestByKey.set(key, d);
-        }
+        const latest = latestOutreachDrafts(drafts);
+        const latestByKey = new Map(
+          latest.map((d) => [`${d.channel}:${d.step ?? "linkedin"}`, d]),
+        );
 
         const emailSections = [1, 2, 3]
           .map((step) => latestByKey.get(`email:${step}`))

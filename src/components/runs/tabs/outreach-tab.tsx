@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { latestOutreachDrafts } from "@/domain/outreach/outreach";
 import type {
   LeadRow,
   OutreachDraftRow,
@@ -146,9 +147,9 @@ export function OutreachTab({
       </div>
 
       {qualified.map((lead) => {
-        const drafts = outreachDrafts
-          .filter((d) => d.lead_id === lead.id)
-          .sort((a, b) => (a.step ?? 0) - (b.step ?? 0));
+        const drafts = latestOutreachDrafts(
+          outreachDrafts.filter((d) => d.lead_id === lead.id),
+        ).sort((a, b) => (a.step ?? 0) - (b.step ?? 0));
 
         return (
           <Card key={lead.id}>
