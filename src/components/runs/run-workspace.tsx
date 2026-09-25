@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { RunActions } from "@/components/runs/run-actions";
 import { RunStatusBadge } from "@/components/runs/run-status-badge";
@@ -67,6 +67,15 @@ export function RunWorkspace(props: {
 }) {
   const { run } = props;
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<(typeof WORKSPACE_TABS)[number]>(
+    () => resolveTab(props.initialTab),
+  );
+  const [outreachLeadId, setOutreachLeadId] = useState<string | null>(null);
+
+  function viewOutreachFor(leadId: string) {
+    setOutreachLeadId(leadId);
+    setActiveTab("outreach");
+  }
 
   // Realtime refresh while the run is still active (BUILD-PLAN.md section
   // 50): a Supabase channel pushes an update the moment something relevant
@@ -157,8 +166,10 @@ export function RunWorkspace(props: {
       </div>
 
       <Tabs
-        key={resolveTab(props.initialTab)}
-        defaultValue={resolveTab(props.initialTab)}
+        value={activeTab}
+        onValueChange={(value) =>
+          setActiveTab(value as (typeof WORKSPACE_TABS)[number])
+        }
       >
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -181,6 +192,7 @@ export function RunWorkspace(props: {
             companies={props.companies}
             leads={props.leads}
             sourcesByCompany={props.sourcesByCompany}
+            events={props.events}
             hardFilters={props.approvedIcp?.criteria.hard_filters}
           />
         </TabsContent>
@@ -200,6 +212,7 @@ export function RunWorkspace(props: {
             leads={props.leads}
             sourcesByCompany={props.sourcesByCompany}
             hardFilters={props.approvedIcp?.criteria.hard_filters}
+            onViewOutreach={viewOutreachFor}
           />
         </TabsContent>
         <TabsContent value="outreach">
@@ -207,6 +220,9 @@ export function RunWorkspace(props: {
             run={run}
             leads={props.leads}
             outreachDrafts={props.outreachDrafts}
+            sourcesByCompany={props.sourcesByCompany}
+            selectedLeadId={outreachLeadId}
+            onSelectLead={setOutreachLeadId}
           />
         </TabsContent>
       </Tabs>

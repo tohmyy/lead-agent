@@ -92,27 +92,45 @@ export function ActivityTab({
         </summary>
         <div className="divide-y border-t">
           {toolCalls.map((call) => (
-            <div key={call.id} className="space-y-1 px-4 py-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs">{call.tool_name}</span>
-                <span
-                  className={
-                    call.status === "success"
-                      ? "text-muted-foreground text-xs"
-                      : call.status === "failed"
-                        ? "text-destructive text-xs"
-                        : "text-muted-foreground text-xs"
-                  }
-                >
-                  {call.status}
-                  {call.duration_ms ? ` · ${call.duration_ms}ms` : ""}
-                </span>
+            <details key={call.id} className="px-4 py-3 text-sm">
+              <summary className="cursor-pointer list-none select-none">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs">{call.tool_name}</span>
+                  <span
+                    className={
+                      call.status === "success"
+                        ? "text-muted-foreground text-xs"
+                        : call.status === "failed"
+                          ? "text-destructive text-xs"
+                          : "text-muted-foreground text-xs"
+                    }
+                  >
+                    {call.status}
+                    {call.duration_ms ? ` · ${call.duration_ms}ms` : ""}
+                  </span>
+                </div>
+                <p className="text-muted-foreground mt-1">{call.purpose}</p>
+                {call.error_message && (
+                  <p className="text-destructive">{call.error_message}</p>
+                )}
+              </summary>
+              <div className="mt-2 space-y-2">
+                <div>
+                  <p className="text-muted-foreground mb-1 text-xs">Input</p>
+                  <pre className="bg-muted overflow-x-auto rounded p-2 text-xs">
+                    {JSON.stringify(call.input_summary, null, 2)}
+                  </pre>
+                </div>
+                {call.result_summary && (
+                  <div>
+                    <p className="text-muted-foreground mb-1 text-xs">Result</p>
+                    <pre className="bg-muted overflow-x-auto rounded p-2 text-xs">
+                      {JSON.stringify(call.result_summary, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
-              <p className="text-muted-foreground">{call.purpose}</p>
-              {call.error_message && (
-                <p className="text-destructive">{call.error_message}</p>
-              )}
-            </div>
+            </details>
           ))}
         </div>
       </details>

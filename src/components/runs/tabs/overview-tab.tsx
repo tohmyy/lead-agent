@@ -2,8 +2,10 @@ import Link from "next/link";
 
 import { ApprovedCriteriaStrip } from "@/components/runs/approved-criteria-strip";
 import { CompaniesSection } from "@/components/runs/companies-section";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { computeRunProgress } from "@/domain/runs/run-progress";
 import { recordedSpend } from "@/domain/runs/spend";
 import { formatUsd } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
@@ -12,6 +14,7 @@ import type {
   IcpCriteria,
   LeadRow,
   LeadSourceRow,
+  RunEventRow,
   RunRow,
 } from "@/infrastructure/supabase/types";
 
@@ -39,40 +42,66 @@ function Stat({
   );
 }
 
-function showPreservedWork(run: RunRow): boolean {
-  if (run.status === "failed" || run.status === "cancelled") return true;
-  return (
-    (run.status === "awaiting_review" || run.status === "completed") &&
-    run.qualified_count < run.qualified_target
-  );
-}
-
 export function OverviewTab({
   run,
   companies,
   leads,
   sourcesByCompany,
+  events,
   hardFilters,
 }: {
   run: RunRow;
   companies: DiscoveredCompanyRow[];
   leads: LeadRow[];
   sourcesByCompany: Record<string, LeadSourceRow[]>;
+  events: RunEventRow[];
   hardFilters?: IcpCriteria["hard_filters"];
 }) {
-  const rejected = leads.filter(
-    (l) => l.qualification_status === "not_qualified",
-  ).length;
+  const progress = computeRunProgress({ run, events, sourcesByCompany });
+  const rejected = progress.rejectedCount;
   const needsReview = leads.filter(
     (l) => l.qualification_status === "needs_review",
   ).length;
   const spend = recordedSpend(run);
+  const showPreservedWork =
+    run.status === "failed" ||
+    run.status === "cancelled" ||
+    progress.banners.targetShortfall;
 
   return (
     <div className="space-y-4">
       <ApprovedCriteriaStrip hardFilters={hardFilters} />
 
-      {showPreservedWork(run) && (
+      <div>
+        <p className="text-lg font-semibold">{progress.stageLabel}</p>
+        {progress.currentActivity && (
+          <p className="text-muted-foreground text-sm">
+            {progress.currentActivity}
+          </p>
+        )}
+      </div>
+
+      {progress.banners.discoveryCapReached && (
+        <Alert>
+          <AlertTitle>Discovery limit reached</AlertTitle>
+          <AlertDescription>
+            {progress.discoveredCount} / {progress.discoveryLimit} companies
+            discovered, {progress.qualifiedCount} / {progress.qualifiedTarget}{" "}
+            qualified — no further companies can be discovered for this run.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {progress.banners.qualityIssueMessage && (
+        <Alert variant="destructive">
+          <AlertTitle>Quality check</AlertTitle>
+          <AlertDescription>
+            {progress.banners.qualityIssueMessage}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {showPreservedWork && (
         <Card>
           <CardHeader>
             <CardTitle>
@@ -138,7 +167,7 @@ export function OverviewTab({
           <CardHeader>
             <CardTitle>Progress</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <Stat
               label={`Qualified leads (of ${run.qualified_target})`}
               value={run.qualified_count}
@@ -148,6 +177,7 @@ export function OverviewTab({
               label={`Companies discovered (of ${run.discovery_limit})`}
               value={companies.length}
             />
+            <Stat label="Researched" value={progress.researchedCount} />
             <Stat label="Not qualified" value={rejected} />
             <Stat label="Needs review" value={needsReview} />
           </CardContent>
@@ -181,7 +211,7 @@ export function OverviewTab({
               be increased by the agent. Recorded spend is the sum of provider
               charges stored for this run.
             </p>
-            {run.error_message && !showPreservedWork(run) && (
+            {run.error_message && !showPreservedWork && (
               <p className="text-destructive">{run.error_message}</p>
             )}
           </CardContent>

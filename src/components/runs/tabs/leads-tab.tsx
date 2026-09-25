@@ -7,6 +7,7 @@ import { ApprovedCriteriaStrip } from "@/components/runs/approved-criteria-strip
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Sheet,
   SheetContent,
@@ -21,7 +22,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { employeeCountFromMetadata } from "@/domain/leads/lead";
+import {
+  employeeCountFromMetadata,
+  industryFromMetadata,
+  locationFromMetadata,
+} from "@/domain/leads/lead";
 import type {
   HardFilterResult,
   LeadRow,
@@ -70,17 +75,28 @@ export function LeadsTab({
   leads,
   sourcesByCompany,
   hardFilters,
+  onViewOutreach,
 }: {
   run: RunRow;
   leads: LeadRow[];
   sourcesByCompany: Record<string, LeadSourceRow[]>;
   hardFilters?: string[];
+  onViewOutreach?: (leadId: string) => void;
 }) {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [query, setQuery] = useState("");
 
   const qualified = leads.filter((l) => l.qualification_status === "qualified");
-  const visible = showAll ? leads : qualified;
+  const scoped = showAll ? leads : qualified;
+  const normalizedQuery = query.trim().toLowerCase();
+  const visible = normalizedQuery
+    ? scoped.filter(
+        (l) =>
+          l.company_name.toLowerCase().includes(normalizedQuery) ||
+          l.domain.toLowerCase().includes(normalizedQuery),
+      )
+    : scoped;
   const selectedLead = leads.find((l) => l.id === selectedLeadId) ?? null;
 
   if (leads.length === 0) {
@@ -98,15 +114,27 @@ export function LeadsTab({
   return (
     <div className="space-y-3">
       <ApprovedCriteriaStrip hardFilters={hardFilters} />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-muted-foreground text-sm">
           {qualified.length} qualified
         </p>
-        <Button variant="ghost" size="sm" onClick={() => setShowAll((v) => !v)}>
-          {showAll
-            ? "Show qualified only"
-            : `Show reviewed / not qualified (${leads.length - qualified.length})`}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search company or domain"
+            className="w-56"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowAll((v) => !v)}
+          >
+            {showAll
+              ? "Show qualified only"
+              : `Show reviewed / not qualified (${leads.length - qualified.length})`}
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -116,6 +144,7 @@ export function LeadsTab({
               <TableHead>Company</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Confidence</TableHead>
+              <TableHead>Industry</TableHead>
               <TableHead>Employees</TableHead>
               <TableHead>Domain</TableHead>
               <TableHead>Review state</TableHead>
@@ -140,6 +169,9 @@ export function LeadsTab({
                   {lead.confidence_score !== null
                     ? `${lead.confidence_score}%`
                     : "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {industryFromMetadata(lead.research_metadata) ?? "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {employeeCountFromMetadata(lead.research_metadata) ?? "—"}
@@ -168,6 +200,7 @@ export function LeadsTab({
               sources={
                 sourcesByCompany[selectedLead.discovered_company_id] ?? []
               }
+              onViewOutreach={onViewOutreach}
             />
           )}
         </SheetContent>
@@ -180,14 +213,19 @@ function LeadDetail({
   runId,
   lead,
   sources,
+  onViewOutreach,
 }: {
   runId: string;
   lead: LeadRow;
   sources: LeadSourceRow[];
+  onViewOutreach?: (leadId: string) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const fitReasons = lead.fit_reasons ?? [];
   const concerns = lead.concerns ?? [];
+  const industry = industryFromMetadata(lead.research_metadata);
+  const employees = employeeCountFromMetadata(lead.research_metadata);
+  const location = locationFromMetadata(lead.research_metadata);
 
   return (
     <>
@@ -213,12 +251,19 @@ function LeadDetail({
           </p>
         )}
 
-        {employeeCountFromMetadata(lead.research_metadata) !== null && (
-          <p className="text-sm">
-            <span className="font-medium">Employees:</span>{" "}
-            {employeeCountFromMetadata(lead.research_metadata)}
-          </p>
-        )}
+        <div>
+          <h3 className="mb-2 text-sm font-medium">Company</h3>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+            <dt className="text-muted-foreground">Industry</dt>
+            <dd>{industry ?? "—"}</dd>
+            <dt className="text-muted-foreground">Employees</dt>
+            <dd>{employees ?? "—"}</dd>
+            <dt className="text-muted-foreground">Location</dt>
+            <dd>{location ?? "—"}</dd>
+            <dt className="text-muted-foreground">Domain</dt>
+            <dd>{lead.domain}</dd>
+          </dl>
+        </div>
 
         {(lead.hard_filter_results ?? []).length > 0 && (
           <div>
@@ -328,6 +373,15 @@ function LeadDetail({
           >
             Mark reviewed
           </Button>
+          {lead.qualification_status === "qualified" && onViewOutreach && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onViewOutreach(lead.id)}
+            >
+              View outreach
+            </Button>
+          )}
         </div>
       </div>
     </>
