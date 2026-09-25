@@ -37,6 +37,7 @@ export class LeadRepository {
       confidence_score: input.data.confidence_score ?? null,
       fit_reasons: input.data.fit_reasons,
       concerns: input.data.concerns,
+      hard_filter_results: input.data.hard_filter_results,
       qualification_reasoning: input.data.qualification_reasoning,
       source_summary: input.data.source_summary,
       research_metadata: input.data.research_metadata ?? null,

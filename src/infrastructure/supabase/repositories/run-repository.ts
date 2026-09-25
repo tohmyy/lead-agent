@@ -2,6 +2,7 @@ import "server-only";
 
 import { AppError } from "@/domain/shared/errors";
 import { assertValidTransition } from "@/domain/runs/run";
+import { assertNonNegativeCostDelta } from "@/domain/runs/spend";
 import { createServiceRoleSupabaseClient } from "@/infrastructure/supabase/service-role-client";
 import type { RunRow, RunStatus } from "@/infrastructure/supabase/types";
 
@@ -130,6 +131,24 @@ export class RunRepository {
         "DATABASE_ERROR",
         "Failed to release discovery slots.",
       );
+    }
+  }
+
+  async addCost(
+    runId: string,
+    delta: { discoveryUsd: number; agentUsd: number },
+  ): Promise<void> {
+    assertNonNegativeCostDelta(delta.discoveryUsd);
+    assertNonNegativeCostDelta(delta.agentUsd);
+    if (delta.discoveryUsd === 0 && delta.agentUsd === 0) return;
+
+    const { error } = await this.db.rpc("add_run_cost", {
+      p_run_id: runId,
+      p_discovery_usd: delta.discoveryUsd,
+      p_agent_usd: delta.agentUsd,
+    });
+    if (error) {
+      throw new AppError("DATABASE_ERROR", "Failed to record run cost.");
     }
   }
 

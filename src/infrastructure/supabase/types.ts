@@ -84,6 +84,12 @@ export type Concern = {
   source_ids: string[];
 };
 
+export type HardFilterResult = {
+  filter: string;
+  result: "pass" | "fail" | "unknown";
+  evidence?: string;
+};
+
 export type PersonalizationContext = {
   claims: Array<{ text: string; source_id: string }>;
 };
@@ -105,6 +111,8 @@ export type RunRow = {
   discovered_count: number;
   qualified_count: number;
   rejected_count: number;
+  discovery_cost_usd: number;
+  agent_cost_usd: number;
   started_at: string | null;
   completed_at: string | null;
   error_message: string | null;
@@ -149,6 +157,7 @@ export type LeadRow = {
   confidence_score: number | null;
   fit_reasons: FitReason[];
   concerns: Concern[];
+  hard_filter_results: HardFilterResult[];
   qualification_reasoning: string;
   source_summary: string;
   research_metadata: Record<string, unknown> | null;
@@ -230,6 +239,8 @@ type RunInsert = Optional<
   | "discovered_count"
   | "qualified_count"
   | "rejected_count"
+  | "discovery_cost_usd"
+  | "agent_cost_usd"
   | "started_at"
   | "completed_at"
   | "error_message"
@@ -259,6 +270,7 @@ type LeadInsert = Optional<
   | "confidence_score"
   | "fit_reasons"
   | "concerns"
+  | "hard_filter_results"
   | "research_metadata"
   | "review_state"
   | "qualified_at"
@@ -339,6 +351,14 @@ export type Database = {
           p_run_id: string;
           p_qualified_delta: number;
           p_rejected_delta: number;
+        };
+        Returns: undefined;
+      };
+      add_run_cost: {
+        Args: {
+          p_run_id: string;
+          p_discovery_usd: number;
+          p_agent_usd: number;
         };
         Returns: undefined;
       };
