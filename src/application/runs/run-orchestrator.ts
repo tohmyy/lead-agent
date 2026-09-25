@@ -42,15 +42,27 @@ export class RunOrchestrator {
     private readonly sources = new SourceRepository(),
   ) {}
 
-  /** Stage 1: objective -> draft ICP. Called right after run creation. */
+  /**
+   * Stage 1: objective -> draft ICP. Called right after run creation, and
+   * again by "Regenerate" on an already-`awaiting_icp_approval` run — that
+   * second case is a same-state action (draft another version while still
+   * awaiting approval), not a real transition, so it must skip
+   * transitionStatus entirely rather than attempt a self-loop
+   * `awaiting_icp_approval -> awaiting_icp_approval`, which
+   * assertValidTransition correctly rejects (ALLOWED_TRANSITIONS has no
+   * self-loops) and which the catch block below would otherwise turn into
+   * failing the whole run.
+   */
   async refineIcp(runId: string, userId: string): Promise<void> {
     try {
       const run = await this.runs.getOwnedRun(runId, userId);
-      await this.runs.transitionStatus(
-        runId,
-        run.status,
-        "awaiting_icp_approval",
-      );
+      if (run.status !== "awaiting_icp_approval") {
+        await this.runs.transitionStatus(
+          runId,
+          run.status,
+          "awaiting_icp_approval",
+        );
+      }
 
       const result = await runAgentTurn(
         { runId, userId },
