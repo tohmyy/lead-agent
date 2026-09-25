@@ -107,7 +107,9 @@ export function LeadsTab({
                     {STATUS_LABEL[lead.qualification_status]}
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell
+                  title="Confidence in this assessment — not a measure of sales priority, conversion likelihood, or company quality."
+                >
                   {lead.confidence_score !== null
                     ? `${lead.confidence_score}%`
                     : "—"}
@@ -172,6 +174,12 @@ function LeadDetail({
             </span>
           )}
         </div>
+        {lead.confidence_score !== null && (
+          <p className="text-muted-foreground text-xs">
+            Confidence in this assessment — not a measure of sales priority,
+            conversion likelihood, or company quality.
+          </p>
+        )}
 
         {fitReasons.length > 0 && (
           <div>

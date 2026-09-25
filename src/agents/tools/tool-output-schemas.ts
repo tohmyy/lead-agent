@@ -85,7 +85,8 @@ export const getCompanyContextOutputSchema = z.object({
     .object({
       name: z.string(),
       domain: z.string(),
-      discoverySource: z.string().optional(),
+      discovery_source: z.string().optional(),
+      discovery_metadata: z.record(z.string(), z.unknown()).nullable(),
     })
     .passthrough(),
   sources: z.array(z.object({ id: z.string().uuid() }).passthrough()),

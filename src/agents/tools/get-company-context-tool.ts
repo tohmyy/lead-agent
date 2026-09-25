@@ -30,7 +30,12 @@ export function createGetCompanyContextTool(ctx: ToolContext) {
         args.company_id,
       );
       return {
-        company: context.company,
+        company: {
+          name: context.company.name,
+          domain: context.company.domain,
+          discovery_source: context.company.discoverySource,
+          discovery_metadata: context.company.discoveryMetadata,
+        },
         sources: context.sources,
         existing_lead: context.existingLead
           ? {

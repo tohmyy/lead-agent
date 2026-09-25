@@ -14,7 +14,12 @@ import { SourceRepository } from "@/infrastructure/supabase/repositories/source-
 import type { LeadRow, RunRow } from "@/infrastructure/supabase/types";
 
 export interface CompanyContext {
-  company: { name: string; domain: string; discoverySource?: string };
+  company: {
+    name: string;
+    domain: string;
+    discoverySource?: string;
+    discoveryMetadata: Record<string, unknown> | null;
+  };
   sources: Array<{
     id: string;
     url: string;
@@ -50,6 +55,7 @@ export class QualificationService {
         name: company.company_name,
         domain: company.domain,
         discoverySource: company.discovery_source,
+        discoveryMetadata: company.raw_metadata,
       },
       sources: sources.map((s) => ({
         id: s.id,
