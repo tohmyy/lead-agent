@@ -1,5 +1,6 @@
 import { isDiscoveryLimitReached, isRunActive } from "@/domain/runs/run";
 import type {
+  LeadRow,
   LeadSourceRow,
   RunEventRow,
   RunEventType,
@@ -27,6 +28,17 @@ export const STAGE_LABELS: Record<RunStage, string> = {
   failed: "Failed",
   cancelled: "Cancelled",
 };
+
+/** Linear pipeline order for a visual stepper. Terminal interruptions
+ * (failed/cancelled) are deliberately excluded — they aren't steps. */
+export const STAGE_ORDER: RunStage[] = [
+  "understanding_request",
+  "waiting_icp_approval",
+  "finding_companies",
+  "researching_companies",
+  "writing_outreach",
+  "ready_for_review",
+];
 
 const RESEARCHING_EVENT_TYPES: ReadonlySet<RunEventType> = new Set([
   "company_research_started",
@@ -101,6 +113,8 @@ export type RunProgress = {
   discoveryLimit: number;
   rejectedCount: number;
   banners: RunProgressBanners;
+  /** Run is waiting on a human action, or has a lead flagged for review. */
+  needsAttention: boolean;
 };
 
 const LEFT_RESEARCH_STATUSES: ReadonlySet<RunStatus> = new Set([
@@ -113,10 +127,15 @@ export function computeRunProgress(input: {
   run: RunRow;
   events: RunEventRow[];
   sourcesByCompany: Record<string, LeadSourceRow[]>;
+  leads?: LeadRow[];
 }): RunProgress {
-  const { run, events, sourcesByCompany } = input;
+  const { run, events, sourcesByCompany, leads = [] } = input;
   const latestEventType = events.at(-1)?.event_type ?? null;
   const stage = deriveStage(run.status, latestEventType);
+  const needsAttention =
+    run.status === "awaiting_icp_approval" ||
+    run.status === "awaiting_review" ||
+    leads.some((l) => l.qualification_status === "needs_review");
 
   const targetShortfall =
     LEFT_RESEARCH_STATUSES.has(run.status) &&
@@ -152,5 +171,6 @@ export function computeRunProgress(input: {
       discoveryCapReached,
       qualityIssueMessage,
     },
+    needsAttention,
   };
 }
