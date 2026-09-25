@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { QualificationStatus } from "@/infrastructure/supabase/types";
+
 export const SOURCE_TYPES = [
   "homepage",
   "about",
@@ -10,6 +12,19 @@ export const SOURCE_TYPES = [
   "blog",
   "other",
 ] as const;
+
+export type CompanyResearchOutcome = QualificationStatus | "not_researched";
+
+export function companyResearchOutcome(
+  companyId: string,
+  leads: Array<{
+    discovered_company_id: string;
+    qualification_status: QualificationStatus;
+  }>,
+): CompanyResearchOutcome {
+  const lead = leads.find((item) => item.discovered_company_id === companyId);
+  return lead?.qualification_status ?? "not_researched";
+}
 
 export const recordSourceInputSchema = z.object({
   company_id: z.string().uuid(),

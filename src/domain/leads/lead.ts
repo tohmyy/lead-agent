@@ -23,6 +23,12 @@ const concernSchema = z.object({
   source_ids: z.array(z.string().uuid()),
 });
 
+export const hardFilterResultSchema = z.object({
+  filter: z.string().min(1),
+  result: z.enum(["pass", "fail", "unknown"]),
+  evidence: z.string().optional(),
+});
+
 /**
  * save_lead input (TOOLS-CONTRACT.md section 27, merged with data-model.md's
  * structured fit_reasons/concerns per the implementation plan's conflict
@@ -34,6 +40,11 @@ export const saveLeadInputSchema = z.object({
   confidence_score: z.number().min(0).max(100).nullable().optional(),
   fit_reasons: z.array(fitReasonSchema),
   concerns: z.array(concernSchema),
+  /**
+   * One verdict per approved hard filter, using the filter text from
+   * get_run_context exactly. A `fail` cannot be saved as qualified.
+   */
+  hard_filter_results: z.array(hardFilterResultSchema),
   qualification_reasoning: z.string().min(1),
   source_summary: z.string().min(1),
   /**
@@ -102,4 +113,53 @@ export function assertHardFiltersNotViolated(
       );
     }
   }
+}
+
+/**
+ * Every approved hard filter needs a verdict. Qualifying a company that
+ * failed any of them is rejected here, not left to the prompt.
+ */
+export function assertHardFilterResults(input: {
+  status: (typeof QUALIFICATION_STATUSES)[number];
+  approvedFilters: string[];
+  results: Array<{ filter: string; result: "pass" | "fail" | "unknown" }>;
+}) {
+  const seen = new Map<string, (typeof input.results)[number]>();
+  for (const result of input.results) {
+    const key = result.filter.trim();
+    if (seen.has(key)) {
+      throw new AppError(
+        "INVALID_INPUT",
+        `Duplicate hard-filter result for "${key}".`,
+      );
+    }
+    seen.set(key, result);
+  }
+
+  for (const filter of input.approvedFilters) {
+    const key = filter.trim();
+    const result = seen.get(key);
+    if (!result) {
+      throw new AppError(
+        "INVALID_INPUT",
+        `Missing hard-filter result for "${filter}". Copy each approved hard filter exactly.`,
+      );
+    }
+    if (input.status === "qualified" && result.result === "fail") {
+      throw new AppError(
+        "SAFETY_VALIDATION_FAILED",
+        `Hard filter "${filter}" failed; this company cannot be marked qualified.`,
+      );
+    }
+  }
+}
+
+export function employeeCountFromMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+): number | null {
+  const value = metadata?.employee_count;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    return null;
+  }
+  return value;
 }

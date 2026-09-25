@@ -5,6 +5,9 @@ import {
   assertRunLimitsValid,
   assertValidTransition,
   computeEffectiveDiscoveryLimit,
+  findDuplicateRun,
+  normalizeObjective,
+  resolveCreateDecision,
 } from "./run";
 
 describe("assertRunLimitsValid", () => {
@@ -106,5 +109,57 @@ describe("assertValidTransition", () => {
     expect(() =>
       assertValidTransition("awaiting_icp_approval", "failed"),
     ).not.toThrow();
+  });
+});
+
+describe("duplicate objectives", () => {
+  const existing = [
+    {
+      id: "older",
+      objective: "Find  US   B2B SaaS companies.",
+      created_at: "2026-01-01T00:00:00.000Z",
+    },
+    {
+      id: "newer",
+      objective: "find us b2b saas companies.",
+      created_at: "2026-02-01T00:00:00.000Z",
+    },
+  ];
+
+  it("treats whitespace and case differences as the same objective", () => {
+    expect(normalizeObjective("  Find   US b2b SaaS companies. ")).toBe(
+      "find us b2b saas companies.",
+    );
+    expect(findDuplicateRun(existing, "Find US B2B SaaS companies.")?.id).toBe(
+      "newer",
+    );
+  });
+
+  it("does not match a different objective", () => {
+    expect(
+      resolveCreateDecision({
+        continueAnyway: false,
+        existing,
+        objective: "Find US agencies",
+      }),
+    ).toEqual({ action: "create" });
+  });
+
+  it("blocks an exact normalized match unless continue anyway is set", () => {
+    expect(
+      resolveCreateDecision({
+        continueAnyway: false,
+        existing,
+        objective: "Find US B2B SaaS companies.",
+      }),
+    ).toEqual({ action: "block", matchId: "newer" });
+
+    expect(
+      resolveCreateDecision({
+        continueAnyway: true,
+        existing,
+        objective: "Find US B2B SaaS companies.",
+      }),
+    ).toEqual({ action: "create" });
   });
 });

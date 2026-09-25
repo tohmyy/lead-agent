@@ -138,3 +138,37 @@ export function isQualifiedTargetReached(
 ): boolean {
   return run.qualified_count >= run.qualified_target;
 }
+
+/** Exact match key for "you've run this objective before". No fuzzy search. */
+export function normalizeObjective(objective: string): string {
+  return objective.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+export function findDuplicateRun<
+  T extends { id: string; objective: string; created_at: string },
+>(runs: T[], objective: string): T | null {
+  const needle = normalizeObjective(objective);
+  const matches = runs.filter(
+    (run) => normalizeObjective(run.objective) === needle,
+  );
+  if (matches.length === 0) return null;
+  return (
+    matches.sort((a, b) => b.created_at.localeCompare(a.created_at))[0] ?? null
+  );
+}
+
+/**
+ * Continue-anyway is an explicit second submit. Without that flag, an
+ * exact normalized match blocks creation so a paid run is not started
+ * by accident.
+ */
+export function resolveCreateDecision(input: {
+  continueAnyway: boolean;
+  existing: Array<{ id: string; objective: string; created_at: string }>;
+  objective: string;
+}): { action: "create" } | { action: "block"; matchId: string } {
+  if (input.continueAnyway) return { action: "create" };
+  const match = findDuplicateRun(input.existing, input.objective);
+  if (!match) return { action: "create" };
+  return { action: "block", matchId: match.id };
+}

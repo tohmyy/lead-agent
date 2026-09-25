@@ -2,7 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import { AppError } from "@/domain/shared/errors";
 import type { IcpCriteria } from "@/infrastructure/supabase/types";
-import { assertConfidenceInRange, assertHardFiltersNotViolated } from "./lead";
+import {
+  assertConfidenceInRange,
+  assertHardFilterResults,
+  assertHardFiltersNotViolated,
+} from "./lead";
 
 describe("assertConfidenceInRange", () => {
   it("accepts boundary and mid-range values (TEST-PLAN.md LEAD-004)", () => {
@@ -49,6 +53,39 @@ describe("assertHardFiltersNotViolated", () => {
     expect(() =>
       assertHardFiltersNotViolated("qualified", criteria, {}),
     ).not.toThrow();
+  });
+
+  it("rejects qualifying a company that failed an approved hard filter", () => {
+    expect(() =>
+      assertHardFilterResults({
+        status: "qualified",
+        approvedFilters: ["US-based", "B2B SaaS"],
+        results: [
+          { filter: "US-based", result: "pass" },
+          { filter: "B2B SaaS", result: "fail" },
+        ],
+      }),
+    ).toThrow(AppError);
+  });
+
+  it("allows a failed hard filter when the company is not qualified", () => {
+    expect(() =>
+      assertHardFilterResults({
+        status: "not_qualified",
+        approvedFilters: ["US-based"],
+        results: [{ filter: "US-based", result: "fail" }],
+      }),
+    ).not.toThrow();
+  });
+
+  it("requires a result for every approved hard filter", () => {
+    expect(() =>
+      assertHardFilterResults({
+        status: "qualified",
+        approvedFilters: ["US-based", "B2B SaaS"],
+        results: [{ filter: "US-based", result: "pass" }],
+      }),
+    ).toThrow(AppError);
   });
 
   it("never blocks a not_qualified or needs_review decision", () => {

@@ -51,15 +51,46 @@ export type SaveOutreachDraftInput = z.infer<
  * createDraft: "a regenerate creates the next version for the same
  * (lead_id, channel, step) rather than mutating a reviewed draft"). Any
  * code that displays, checks, or exports drafts must dedupe to the latest
- * version per (channel, step) first, or it risks acting on a stale draft
- * while a newer, unreviewed version silently exists alongside it.
+ * version per (lead, channel, step) first, or it risks acting on a stale
+ * draft while a newer, unreviewed version silently exists alongside it.
+ * The lead id is part of the key so drafts for different companies are
+ * not collapsed together when a whole run is exported at once.
  */
+export type ExportScope = "approved" | "all";
+
+export function parseExportScope(value: string | null): ExportScope {
+  return value === "all" ? "all" : "approved";
+}
+
+/** Latest draft per channel/step, then drop anything not approved unless scope is all. */
+export function draftsForExport(
+  drafts: OutreachDraftRow[],
+  scope: ExportScope,
+): OutreachDraftRow[] {
+  const latest = latestOutreachDrafts(drafts);
+  if (scope === "all") return latest;
+  return latest.filter((draft) => draft.review_state === "approved_for_export");
+}
+
+export function leadsForExport<
+  T extends { id: string; qualification_status: string },
+>(leads: T[], drafts: OutreachDraftRow[], scope: ExportScope): T[] {
+  const qualified = leads.filter(
+    (lead) => lead.qualification_status === "qualified",
+  );
+  if (scope === "all") return qualified;
+  const approvedLeadIds = new Set(
+    draftsForExport(drafts, "approved").map((draft) => draft.lead_id),
+  );
+  return qualified.filter((lead) => approvedLeadIds.has(lead.id));
+}
+
 export function latestOutreachDrafts(
   drafts: OutreachDraftRow[],
 ): OutreachDraftRow[] {
   const latest = new Map<string, OutreachDraftRow>();
   for (const draft of drafts) {
-    const key = `${draft.channel}:${draft.step ?? "linkedin"}`;
+    const key = `${draft.lead_id}:${draft.channel}:${draft.step ?? "linkedin"}`;
     const existing = latest.get(key);
     if (!existing || draft.version > existing.version) {
       latest.set(key, draft);
