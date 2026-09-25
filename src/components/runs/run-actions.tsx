@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import { cancelRun, completeRun } from "@/app/actions/runs";
 import { Button } from "@/components/ui/button";
@@ -14,8 +14,11 @@ const CANCELLABLE_STATUSES = new Set([
   "generating_outreach",
 ]);
 
+type ActiveAction = "complete" | "cancel" | null;
+
 export function RunActions({ run }: { run: RunRow }) {
   const [pending, startTransition] = useTransition();
+  const [activeAction, setActiveAction] = useState<ActiveAction>(null);
 
   const showComplete = run.status === "awaiting_review";
   const showCancel = CANCELLABLE_STATUSES.has(run.status);
@@ -26,8 +29,12 @@ export function RunActions({ run }: { run: RunRow }) {
     <div className="flex gap-2">
       {showComplete && (
         <Button
+          loading={pending && activeAction === "complete"}
           disabled={pending}
-          onClick={() => startTransition(() => completeRun(run.id))}
+          onClick={() => {
+            setActiveAction("complete");
+            startTransition(() => completeRun(run.id));
+          }}
         >
           Mark Run Complete
         </Button>
@@ -35,11 +42,13 @@ export function RunActions({ run }: { run: RunRow }) {
       {showCancel && (
         <Button
           variant="outline"
+          loading={pending && activeAction === "cancel"}
           disabled={pending}
           onClick={() => {
             if (!window.confirm("Cancel this run? Existing progress is preserved, but no further research will happen.")) {
               return;
             }
+            setActiveAction("cancel");
             startTransition(() => cancelRun(run.id));
           }}
         >

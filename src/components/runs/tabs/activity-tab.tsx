@@ -1,22 +1,60 @@
+import {
+  AlertCircleIcon,
+  CheckCircle2Icon,
+  CheckCircleIcon,
+  CircleIcon,
+  CircleSlashIcon,
+  OctagonXIcon,
+  PenLineIcon,
+  PlayIcon,
+  SearchIcon,
+  SparklesIcon,
+  type LucideIcon,
+} from "lucide-react";
+
 import { Card, CardContent } from "@/components/ui/card";
-import type { RunEventRow, ToolCallRow } from "@/infrastructure/supabase/types";
+import type {
+  RunEventType,
+  RunEventRow,
+  ToolCallRow,
+  ToolCallStatus,
+} from "@/infrastructure/supabase/types";
+import { cn } from "@/lib/utils";
 import { formatTime } from "@/lib/format-date";
 
-const EVENT_ICON: Record<string, string> = {
-  run_created: "✓",
-  icp_refined: "✓",
-  icp_approved: "✓",
-  discovery_started: "→",
-  discovery_completed: "✓",
-  company_research_started: "→",
-  company_research_completed: "✓",
-  lead_qualified: "✓",
-  lead_rejected: "○",
-  outreach_started: "→",
-  outreach_completed: "✓",
-  run_completed: "✓",
-  run_failed: "!",
-  run_cancelled: "×",
+const EVENT_ICON: Record<RunEventType, { icon: LucideIcon; className: string }> = {
+  run_created: { icon: PlayIcon, className: "text-info" },
+  icp_refined: { icon: SparklesIcon, className: "text-muted-foreground" },
+  icp_approved: { icon: CheckCircleIcon, className: "text-success" },
+  discovery_started: { icon: SearchIcon, className: "text-info" },
+  discovery_completed: { icon: CheckCircleIcon, className: "text-success" },
+  company_research_started: { icon: SearchIcon, className: "text-info" },
+  company_research_completed: {
+    icon: CheckCircleIcon,
+    className: "text-success",
+  },
+  lead_qualified: { icon: CheckCircle2Icon, className: "text-success" },
+  lead_rejected: {
+    icon: CircleSlashIcon,
+    className: "text-muted-foreground",
+  },
+  outreach_started: { icon: PenLineIcon, className: "text-info" },
+  outreach_completed: { icon: CheckCircleIcon, className: "text-success" },
+  run_completed: { icon: CheckCircle2Icon, className: "text-success" },
+  run_failed: { icon: AlertCircleIcon, className: "text-destructive" },
+  run_cancelled: { icon: OctagonXIcon, className: "text-muted-foreground" },
+};
+
+const DEFAULT_EVENT_ICON = {
+  icon: CircleIcon,
+  className: "text-muted-foreground",
+};
+
+const TOOL_STATUS_CLASS: Record<ToolCallStatus, string> = {
+  success: "text-success",
+  failed: "text-destructive",
+  running: "text-info",
+  pending: "text-muted-foreground",
 };
 
 /**
@@ -59,11 +97,11 @@ export function ActivityTab({
         <CardContent className="divide-y py-0">
           {events.map((event) => {
             const actor = eventActor(event.event_type);
+            const { icon: Icon, className } =
+              EVENT_ICON[event.event_type] ?? DEFAULT_EVENT_ICON;
             return (
               <div key={event.id} className="flex items-start gap-3 py-3">
-                <span aria-hidden className="text-muted-foreground mt-0.5">
-                  {EVENT_ICON[event.event_type] ?? "•"}
-                </span>
+                <Icon aria-hidden className={cn("mt-0.5 size-4", className)} />
                 <div className="flex-1">
                   <p className="text-sm">{event.message}</p>
                   <p className="text-muted-foreground text-metadata flex items-center gap-1.5">
@@ -96,15 +134,7 @@ export function ActivityTab({
               <summary className="cursor-pointer list-none select-none">
                 <div className="flex items-center justify-between">
                   <span className="font-mono text-xs">{call.tool_name}</span>
-                  <span
-                    className={
-                      call.status === "success"
-                        ? "text-muted-foreground text-xs"
-                        : call.status === "failed"
-                          ? "text-destructive text-xs"
-                          : "text-muted-foreground text-xs"
-                    }
-                  >
+                  <span className={cn("text-xs", TOOL_STATUS_CLASS[call.status])}>
                     {call.status}
                     {call.duration_ms ? ` · ${call.duration_ms}ms` : ""}
                   </span>

@@ -5,7 +5,7 @@ import { CompaniesSection } from "@/components/runs/companies-section";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { computeRunProgress } from "@/domain/runs/run-progress";
+import type { RunProgress } from "@/domain/runs/run-progress";
 import { recordedSpend } from "@/domain/runs/spend";
 import { formatUsd } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
@@ -14,25 +14,32 @@ import type {
   IcpCriteria,
   LeadRow,
   LeadSourceRow,
-  RunEventRow,
   RunRow,
 } from "@/infrastructure/supabase/types";
+
+const TONE_CLASS = {
+  success: "text-success",
+  primary: "text-primary",
+  info: "text-info",
+  warning: "text-warning-foreground",
+  muted: "text-muted-foreground",
+} as const;
 
 function Stat({
   label,
   value,
-  accent = false,
+  tone,
 }: {
   label: string;
   value: string | number;
-  accent?: boolean;
+  tone?: keyof typeof TONE_CLASS;
 }) {
   return (
     <div>
       <p
         className={cn(
           "text-2xl font-semibold tabular-nums",
-          accent && "text-primary",
+          tone && TONE_CLASS[tone],
         )}
       >
         {value}
@@ -44,20 +51,19 @@ function Stat({
 
 export function OverviewTab({
   run,
+  progress,
   companies,
   leads,
   sourcesByCompany,
-  events,
   hardFilters,
 }: {
   run: RunRow;
+  progress: RunProgress;
   companies: DiscoveredCompanyRow[];
   leads: LeadRow[];
   sourcesByCompany: Record<string, LeadSourceRow[]>;
-  events: RunEventRow[];
   hardFilters?: IcpCriteria["hard_filters"];
 }) {
-  const progress = computeRunProgress({ run, events, sourcesByCompany });
   const rejected = progress.rejectedCount;
   const needsReview = leads.filter(
     (l) => l.qualification_status === "needs_review",
@@ -72,14 +78,11 @@ export function OverviewTab({
     <div className="space-y-4">
       <ApprovedCriteriaStrip hardFilters={hardFilters} />
 
-      <div>
-        <p className="text-lg font-semibold">{progress.stageLabel}</p>
-        {progress.currentActivity && (
-          <p className="text-muted-foreground text-sm">
-            {progress.currentActivity}
-          </p>
-        )}
-      </div>
+      {progress.currentActivity && (
+        <p className="text-muted-foreground text-sm">
+          {progress.currentActivity}
+        </p>
+      )}
 
       {progress.banners.discoveryCapReached && (
         <Alert>
@@ -125,8 +128,10 @@ export function OverviewTab({
               qualified · {rejected} not qualified · discovery slots used{" "}
               {run.discovered_count} / {run.discovery_limit}
             </p>
-            {run.error_message && (
-              <p className="text-destructive">{run.error_message}</p>
+            {progress.banners.failed && (
+              <p className="text-destructive">
+                {progress.banners.failed.message}
+              </p>
             )}
             <div className="flex flex-wrap gap-2">
               <Button
@@ -171,15 +176,20 @@ export function OverviewTab({
             <Stat
               label={`Qualified leads (of ${run.qualified_target})`}
               value={run.qualified_count}
-              accent
+              tone="success"
             />
             <Stat
               label={`Companies discovered (of ${run.discovery_limit})`}
               value={companies.length}
+              tone="primary"
             />
-            <Stat label="Researched" value={progress.researchedCount} />
-            <Stat label="Not qualified" value={rejected} />
-            <Stat label="Needs review" value={needsReview} />
+            <Stat
+              label="Researched"
+              value={progress.researchedCount}
+              tone="info"
+            />
+            <Stat label="Not qualified" value={rejected} tone="muted" />
+            <Stat label="Needs review" value={needsReview} tone="warning" />
           </CardContent>
         </Card>
 

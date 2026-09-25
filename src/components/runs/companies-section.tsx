@@ -1,6 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import {
+  BriefcaseIcon,
+  FileIcon,
+  HomeIcon,
+  InfoIcon,
+  NewspaperIcon,
+  PackageIcon,
+  TagIcon,
+  UsersIcon,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +38,7 @@ import type {
   LeadRow,
   LeadSourceRow,
 } from "@/infrastructure/supabase/types";
+import { cn } from "@/lib/utils";
 
 const OUTCOME_LABEL: Record<CompanyResearchOutcome, string> = {
   not_researched: "Not researched yet",
@@ -54,6 +66,28 @@ const SOURCE_TYPE_LABEL: Record<LeadSourceRow["source_type"], string> = {
   careers: "Careers",
   blog: "Blog",
   other: "Other",
+};
+
+const SOURCE_TYPE_ICON: Record<LeadSourceRow["source_type"], LucideIcon> = {
+  homepage: HomeIcon,
+  about: InfoIcon,
+  product: PackageIcon,
+  services: BriefcaseIcon,
+  pricing: TagIcon,
+  careers: UsersIcon,
+  blog: NewspaperIcon,
+  other: FileIcon,
+};
+
+const SOURCE_TYPE_COLOR: Record<LeadSourceRow["source_type"], string> = {
+  homepage: "text-chart-1",
+  about: "text-chart-2",
+  product: "text-chart-3",
+  services: "text-chart-4",
+  pricing: "text-chart-5",
+  careers: "text-chart-1",
+  blog: "text-chart-2",
+  other: "text-chart-3",
 };
 
 export function CompaniesSection({
@@ -164,9 +198,15 @@ export function CompaniesSection({
                     No website sources recorded yet.
                   </p>
                 ) : (
-                  Array.from(grouped.entries()).map(([type, items]) => (
+                  Array.from(grouped.entries()).map(([type, items]) => {
+                    const Icon = SOURCE_TYPE_ICON[type];
+                    return (
                     <div key={type}>
-                      <h3 className="mb-2 text-sm font-medium">
+                      <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium">
+                        <Icon
+                          aria-hidden
+                          className={cn("size-3.5", SOURCE_TYPE_COLOR[type])}
+                        />
                         {SOURCE_TYPE_LABEL[type]}
                       </h3>
                       <ul className="space-y-2">
@@ -187,7 +227,8 @@ export function CompaniesSection({
                         ))}
                       </ul>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </>

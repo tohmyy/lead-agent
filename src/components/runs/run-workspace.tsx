@@ -1,12 +1,16 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { BackLink } from "@/components/layout/back-link";
+import { Badge } from "@/components/ui/badge";
 import { RunActions } from "@/components/runs/run-actions";
+import { RunStageStepper } from "@/components/runs/run-stage-stepper";
 import { RunStatusBadge } from "@/components/runs/run-status-badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isRunActive } from "@/domain/runs/run";
+import { computeRunProgress } from "@/domain/runs/run-progress";
 import { createBrowserSupabaseClient } from "@/infrastructure/supabase/browser-client";
 import { formatDateTime } from "@/lib/format-date";
 import type {
@@ -76,6 +80,20 @@ export function RunWorkspace(props: {
     setOutreachLeadId(leadId);
     setActiveTab("outreach");
   }
+
+  const progress = useMemo(
+    () =>
+      computeRunProgress({
+        run,
+        events: props.events,
+        sourcesByCompany: props.sourcesByCompany,
+        leads: props.leads,
+      }),
+    [run, props.events, props.sourcesByCompany, props.leads],
+  );
+  const needsReviewCount = props.leads.filter(
+    (l) => l.qualification_status === "needs_review",
+  ).length;
 
   // Realtime refresh while the run is still active (BUILD-PLAN.md section
   // 50): a Supabase channel pushes an update the moment something relevant
@@ -150,6 +168,8 @@ export function RunWorkspace(props: {
 
   return (
     <div className="space-y-6">
+      <BackLink href="/" />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-heading max-w-2xl tracking-tight">
@@ -165,6 +185,12 @@ export function RunWorkspace(props: {
         </div>
       </div>
 
+      <RunStageStepper
+        stage={progress.stage}
+        active={isRunActive(run.status)}
+        attention={progress.needsAttention}
+      />
+
       <Tabs
         value={activeTab}
         onValueChange={(value) =>
@@ -175,13 +201,16 @@ export function RunWorkspace(props: {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="icp">ICP</TabsTrigger>
           <TabsTrigger value="activity">Activity</TabsTrigger>
-          <TabsTrigger value="leads">
+          <TabsTrigger value="leads" className="gap-1.5">
             Leads (
             {
               props.leads.filter((l) => l.qualification_status === "qualified")
                 .length
             }
             )
+            {needsReviewCount > 0 && (
+              <Badge variant="warning">{needsReviewCount}</Badge>
+            )}
           </TabsTrigger>
           <TabsTrigger value="outreach">Outreach</TabsTrigger>
         </TabsList>
@@ -189,10 +218,10 @@ export function RunWorkspace(props: {
         <TabsContent value="overview">
           <OverviewTab
             run={run}
+            progress={progress}
             companies={props.companies}
             leads={props.leads}
             sourcesByCompany={props.sourcesByCompany}
-            events={props.events}
             hardFilters={props.approvedIcp?.criteria.hard_filters}
           />
         </TabsContent>
