@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 
 import { RunService } from "@/application/runs/run-service";
-import { leadsForExport, parseExportScope } from "@/domain/outreach/outreach";
+import {
+  leadsForExport,
+  parseExportScope,
+  parseLeadExportStatus,
+} from "@/domain/outreach/outreach";
 import { AppError } from "@/domain/shared/errors";
 import { LeadRepository } from "@/infrastructure/supabase/repositories/lead-repository";
 import { OutreachRepository } from "@/infrastructure/supabase/repositories/outreach-repository";
@@ -23,9 +27,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const scope = parseExportScope(
-    new URL(request.url).searchParams.get("scope"),
-  );
+  const searchParams = new URL(request.url).searchParams;
+  const scope = parseExportScope(searchParams.get("scope"));
+  const status = parseLeadExportStatus(searchParams.get("status"));
 
   try {
     const userId = await requireCurrentUserId();
@@ -35,7 +39,7 @@ export async function GET(
       outreachRepo.listForRun(id),
     ]);
 
-    const qualified = leadsForExport(leads, drafts, scope);
+    const qualified = leadsForExport(leads, drafts, scope, status);
 
     const header = [
       "company_name",
@@ -73,7 +77,7 @@ export async function GET(
     return new NextResponse(csv, {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="run-${run.id}-qualified-leads.csv"`,
+        "Content-Disposition": `attachment; filename="run-${run.id}-${status === "all" ? "leads" : "qualified-leads"}.csv"`,
       },
     });
   } catch (err) {
