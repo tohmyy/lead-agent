@@ -7,7 +7,7 @@ import {
   setOutreachReviewState,
   updateOutreachDraft,
 } from "@/app/actions/review";
-import { Badge } from "@/components/ui/badge";
+import { ReviewStateBadge } from "@/components/runs/review-state-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -56,13 +56,7 @@ export function DraftEditor({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Badge
-          variant={
-            draft.review_state === "approved_for_export" ? "success" : "outline"
-          }
-        >
-          {draft.review_state.replace(/_/g, " ")}
-        </Badge>
+        <ReviewStateBadge state={draft.review_state} />
       </div>
       {draft.channel === "email" && (
         <div className="space-y-1.5">
@@ -124,6 +118,7 @@ export function DraftEditor({
         {dirty && (
           <Button
             size="sm"
+            variant="secondary"
             loading={pending && activeAction === "save"}
             disabled={pending}
             onClick={() => {
@@ -155,10 +150,16 @@ export function DraftEditor({
         </Button>
         <Button
           size="sm"
-          variant="outline"
           loading={pending && activeAction === "approve"}
           disabled={pending || draft.review_state === "approved_for_export"}
           onClick={() => {
+            if (
+              !window.confirm(
+                "Approve this draft for export? It will be included in outreach exports.",
+              )
+            ) {
+              return;
+            }
             setActiveAction("approve");
             startTransition(() =>
               setOutreachReviewState(runId, draft.id, "approved_for_export"),

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 
 import { setLeadReviewState } from "@/app/actions/review";
 import { ApprovedCriteriaStrip } from "@/components/runs/approved-criteria-strip";
+import { ReviewStateBadge } from "@/components/runs/review-state-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -118,7 +119,7 @@ export function LeadsTab({
         <p className="text-muted-foreground text-sm">
           {qualified.length} qualified
         </p>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -134,6 +135,26 @@ export function LeadsTab({
               ? "Show qualified only"
               : `Show reviewed / not qualified (${leads.length - qualified.length})`}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={
+              <a href={`/runs/${run.id}/export/leads.csv?scope=all`}>
+                Export qualified (CSV)
+              </a>
+            }
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={
+              <a href={`/runs/${run.id}/export/leads.csv?scope=all&status=all`}>
+                Export all leads (CSV)
+              </a>
+            }
+          />
         </div>
       </div>
 
@@ -179,8 +200,8 @@ export function LeadsTab({
                 <TableCell className="text-muted-foreground">
                   {lead.domain}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {lead.review_state}
+                <TableCell>
+                  <ReviewStateBadge state={lead.review_state} />
                 </TableCell>
               </TableRow>
             ))}
@@ -234,10 +255,11 @@ function LeadDetail({
         <p className="text-muted-foreground text-sm">{lead.domain}</p>
       </SheetHeader>
       <div className="space-y-6 px-4 pb-6">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge variant={STATUS_VARIANT[lead.qualification_status]}>
             {STATUS_LABEL[lead.qualification_status]}
           </Badge>
+          <ReviewStateBadge state={lead.review_state} />
           {lead.confidence_score !== null && (
             <span className="text-muted-foreground text-sm">
               {lead.confidence_score}% confidence
@@ -364,7 +386,8 @@ function LeadDetail({
           <Button
             size="sm"
             variant="outline"
-            disabled={pending}
+            loading={pending}
+            disabled={pending || lead.review_state !== "not_reviewed"}
             onClick={() =>
               startTransition(() =>
                 setLeadReviewState(runId, lead.id, "reviewed"),
