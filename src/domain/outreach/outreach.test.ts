@@ -7,6 +7,7 @@ import {
   draftsForExport,
   latestOutreachDrafts,
   leadsForExport,
+  parseLeadExportStatus,
   saveOutreachDraftInputSchema,
 } from "./outreach";
 
@@ -212,5 +213,32 @@ describe("export scope", () => {
       ["lead-1", "lead-2"],
     );
     expect(draftsForExport(drafts, "all")).toHaveLength(2);
+  });
+
+  it("defaults status to qualified-only, unaffected by the new param", () => {
+    expect(
+      leadsForExport(leads, drafts, "approved", "qualified").map(
+        (lead) => lead.id,
+      ),
+    ).toEqual(["lead-1"]);
+  });
+
+  it("includes not_qualified leads and bypasses the draft-approval gate when status is all", () => {
+    expect(
+      leadsForExport(leads, drafts, "approved", "all").map((lead) => lead.id),
+    ).toEqual(["lead-1", "lead-2", "lead-3"]);
+  });
+});
+
+describe("parseLeadExportStatus", () => {
+  it("defaults to qualified for anything other than the literal 'all'", () => {
+    expect(parseLeadExportStatus(null)).toBe("qualified");
+    expect(parseLeadExportStatus("")).toBe("qualified");
+    expect(parseLeadExportStatus("qualified")).toBe("qualified");
+    expect(parseLeadExportStatus("bogus")).toBe("qualified");
+  });
+
+  it("parses 'all'", () => {
+    expect(parseLeadExportStatus("all")).toBe("all");
   });
 });

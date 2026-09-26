@@ -72,9 +72,27 @@ export function draftsForExport(
   return latest.filter((draft) => draft.review_state === "approved_for_export");
 }
 
+/**
+ * Qualification-status filtering is a separate axis from `scope`'s
+ * outreach-draft-approval gating — "all" here means every lead in the run
+ * (qualified, not_qualified, needs_review), not just an unapproved qualified
+ * one. Defaults to "qualified" so every existing call site is unaffected.
+ */
+export type LeadExportStatus = "qualified" | "all";
+
+export function parseLeadExportStatus(value: string | null): LeadExportStatus {
+  return value === "all" ? "all" : "qualified";
+}
+
 export function leadsForExport<
   T extends { id: string; qualification_status: string },
->(leads: T[], drafts: OutreachDraftRow[], scope: ExportScope): T[] {
+>(
+  leads: T[],
+  drafts: OutreachDraftRow[],
+  scope: ExportScope,
+  status: LeadExportStatus = "qualified",
+): T[] {
+  if (status === "all") return leads;
   const qualified = leads.filter(
     (lead) => lead.qualification_status === "qualified",
   );
