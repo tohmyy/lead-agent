@@ -1,6 +1,6 @@
 ---
 name: lead-qualification
-description: Use when judging whether a discovered company fits the approved ICP, after researching its website.
+description: Use when judging whether a discovered company fits the approved ICP. Check discovery context before spending a website scrape.
 ---
 
 # Lead Qualification
@@ -9,7 +9,9 @@ Adapted from `assets/lead-qualification-guide.md`. Judge whether a discovered co
 
 ## Inputs
 
-Use, in this order: the approved ICP criteria (from `get_run_context`), company discovery data, and recorded website evidence (`record_source` results, via `get_company_context`).
+Use, in this order: the approved ICP criteria (from `get_run_context`), company discovery data (`get_company_context`), then recorded website evidence (`record_source` results) if you actually researched the site.
+
+Do not call `research_website` on companies returned in `discover_companies.prefiltered` — the application already saved those as `not_qualified` or `needs_review` from discovery metadata. Call `get_company_context` first for every other company; if `existing_lead` is already set, skip research.
 
 ## Decision
 

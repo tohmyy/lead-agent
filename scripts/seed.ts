@@ -108,6 +108,7 @@ async function main() {
       company_name: "Acme Ops Inc.",
       domain: "acme-ops.example.com",
       normalized_domain: "acme-ops.example.com",
+      normalized_name: "acme ops",
       discovery_source: "apify",
       source_url: "https://acme-ops.example.com",
     })

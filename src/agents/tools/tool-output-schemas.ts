@@ -45,6 +45,13 @@ export const discoverCompaniesOutputSchema = z.object({
       domain: z.string(),
     }),
   ),
+  prefiltered: z.array(
+    z.object({
+      company_id: z.string().uuid(),
+      company_name: z.string(),
+      reason: z.string(),
+    }),
+  ),
   count: z.number(),
   provider: z.literal("apify"),
   external_reference: z.string().optional(),

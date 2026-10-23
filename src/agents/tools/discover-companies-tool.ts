@@ -21,7 +21,7 @@ export function createDiscoverCompaniesTool(ctx: ToolContext) {
   return defineRunTool({
     name: "discover_companies",
     description:
-      "Searches for candidate companies matching the approved ICP using the configured discovery provider (Apify). Requires the ICP to be approved and the run to be actively researching. The number of results is capped by the application from the run's remaining discovery budget — you cannot request a specific count. Call get_run_context first if you're unsure how much budget remains; if it returns DISCOVERY_LIMIT_EXCEEDED or TARGET_ALREADY_REACHED, stop discovering and move on to researching/qualifying what's already been found.",
+      "Searches for candidate companies matching the approved ICP using the configured discovery provider (Apify). Requires the ICP to be approved and the run to be actively researching. The number of results is capped by the application from the run's remaining discovery budget — you cannot request a specific count. Returns `discovered` (research these) and `prefiltered` (already saved as not_qualified or needs_review from discovery metadata — do NOT call research_website on them). Call get_run_context first if you're unsure how much budget remains; if it returns DISCOVERY_LIMIT_EXCEEDED, TARGET_ALREADY_REACHED, or a non-retryable PROVIDER_ERROR, stop discovering and qualify companies already found.",
     shape: {
       query: z
         .string()
@@ -42,6 +42,7 @@ export function createDiscoverCompaniesTool(ctx: ToolContext) {
           company_name: c.company_name,
           domain: c.domain,
         })),
+        prefiltered: result.prefiltered,
         count: result.companies.length,
         provider: "apify",
         external_reference: result.externalReference,

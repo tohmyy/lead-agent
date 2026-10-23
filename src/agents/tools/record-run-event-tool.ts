@@ -21,6 +21,7 @@ const RUN_EVENT_TYPES = [
   "discovery_completed",
   "company_research_started",
   "company_research_completed",
+  "company_research_failed",
   "lead_qualified",
   "lead_rejected",
   "outreach_started",

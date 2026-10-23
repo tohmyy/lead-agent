@@ -16,7 +16,7 @@ export function createGetCompanyContextTool(ctx: ToolContext) {
   return defineRunTool({
     name: "get_company_context",
     description:
-      "Retrieves everything persisted so far about a discovered company: its discovery metadata, all recorded evidence sources, and any existing qualification decision. Call this before save_lead or when drafting outreach, so personalization is grounded in what was actually recorded rather than invented.",
+      "Retrieves everything persisted so far about a discovered company: its discovery metadata, all recorded evidence sources, and any existing qualification decision. Call this before research_website and before save_lead. If existing_lead is already set, do not scrape again. Discovery metadata (employee_count, industry, location) is available here even before any website research.",
     shape: {
       company_id: z.string().uuid(),
     },
