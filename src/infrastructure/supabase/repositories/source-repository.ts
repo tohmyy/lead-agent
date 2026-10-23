@@ -71,8 +71,16 @@ export class SourceRepository {
       .select()
       .single();
 
-    if (error)
+    if (error) {
+      const { data: raced } = await this.db
+        .from("lead_sources")
+        .select()
+        .eq("discovered_company_id", input.companyId)
+        .eq("normalized_url", normalizedUrl)
+        .maybeSingle();
+      if (raced) return raced;
       throw new AppError("DATABASE_ERROR", "Failed to persist source.");
+    }
     return data;
   }
 

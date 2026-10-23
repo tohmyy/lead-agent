@@ -7,6 +7,7 @@ import { getServerEnv } from "@/lib/config/env";
 import { assertUrlIsSafeToFetch } from "@/lib/security/url-safety";
 import type { SourceType } from "@/infrastructure/supabase/types";
 import {
+  defaultResearchUrls,
   RELEVANT_PAGE_PATHS,
   type ResearchRequest,
   type ResearchResult,
@@ -65,7 +66,7 @@ export class FirecrawlResearchProvider implements WebsiteResearchProvider {
     const candidates =
       request.urls && request.urls.length > 0
         ? request.urls
-        : [`https://${request.domain}`];
+        : defaultResearchUrls(request.domain);
 
     const bounded = candidates.slice(0, MAX_PAGES_PER_CALL);
     const sources: ResearchedSource[] = [];
@@ -121,7 +122,7 @@ export class FirecrawlResearchProvider implements WebsiteResearchProvider {
       throw new AppError(
         "PROVIDER_ERROR",
         "Website research did not return any usable content for this company.",
-        true,
+        false,
       );
     }
 

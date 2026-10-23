@@ -1,7 +1,11 @@
 import "server-only";
 
 import { AppError } from "@/domain/shared/errors";
-import { normalizeCompanyName, normalizeDomain } from "@/domain/shared/normalize";
+import {
+  resolveIncomingIdentity,
+  selectExistingCompany,
+  shouldUpgradeUnresolvedDomain,
+} from "@/domain/companies/identity";
 import { createServiceRoleSupabaseClient } from "@/infrastructure/supabase/service-role-client";
 import type { DiscoveredCompanyRow } from "@/infrastructure/supabase/types";
 
@@ -11,9 +15,10 @@ export class CompanyRepository {
   }
 
   /**
-   * Upserts on (run_id, normalized_domain) so the same company discovered
-   * twice in one run never creates two records (data-model.md section 14 /
-   * TOOLS-CONTRACT.md section 42).
+   * Upserts so the same company discovered twice in one run never creates
+   * two records. Identity is (run_id, normalized_domain) plus in-run
+   * collapse on external_id and normalized name — LinkedIn profile URLs
+   * must not become a second "company" next to the real website.
    */
   async upsertDiscovered(input: {
     runId: string;
@@ -24,46 +29,49 @@ export class CompanyRepository {
     externalId?: string;
     metadata?: Record<string, unknown>;
   }): Promise<{ company: DiscoveredCompanyRow; wasNew: boolean }> {
-    const normalizedDomain = normalizeDomain(input.domain);
+    const identity = resolveIncomingIdentity({
+      companyName: input.companyName,
+      domain: input.domain,
+      sourceUrl: input.sourceUrl,
+      externalId: input.externalId,
+    });
 
-    const { data: existing, error: findError } = await this.db
-      .from("discovered_companies")
-      .select()
-      .eq("run_id", input.runId)
-      .eq("normalized_domain", normalizedDomain)
-      .maybeSingle();
-
-    if (findError) {
-      throw new AppError(
-        "DATABASE_ERROR",
-        "Failed to look up discovered company.",
-      );
+    const existingRows = await this.listForRun(input.runId);
+    const existing = selectExistingCompany(existingRows, identity);
+    if (existing) {
+      if (shouldUpgradeUnresolvedDomain(existing.normalized_domain, identity)) {
+        return {
+          company: await this.upgradeDomain(existing.id, {
+            domain: identity.domain,
+            normalizedDomain: identity.normalizedDomain,
+            sourceUrl: identity.sourceUrl,
+            externalId: identity.externalId,
+            metadata: input.metadata,
+          }),
+          wasNew: false,
+        };
+      }
+      return { company: existing, wasNew: false };
     }
-    if (existing) return { company: existing, wasNew: false };
 
     const { data, error } = await this.db
       .from("discovered_companies")
       .insert({
         run_id: input.runId,
-        company_name: normalizeCompanyName(input.companyName),
-        domain: input.domain,
-        normalized_domain: normalizedDomain,
+        company_name: identity.displayName,
+        domain: identity.domain,
+        normalized_domain: identity.normalizedDomain,
+        normalized_name: identity.nameKey,
         discovery_source: input.discoverySource,
-        source_url: input.sourceUrl,
-        external_id: input.externalId,
+        source_url: identity.sourceUrl,
+        external_id: identity.externalId,
         raw_metadata: input.metadata,
       })
       .select()
       .single();
 
     if (error) {
-      // Concurrent insert raced us — re-fetch instead of erroring.
-      const { data: raced } = await this.db
-        .from("discovered_companies")
-        .select()
-        .eq("run_id", input.runId)
-        .eq("normalized_domain", normalizedDomain)
-        .maybeSingle();
+      const raced = await this.refetchDuplicate(input.runId, identity);
       if (raced) return { company: raced, wasNew: false };
       throw new AppError(
         "DATABASE_ERROR",
@@ -72,6 +80,45 @@ export class CompanyRepository {
     }
 
     return { company: data, wasNew: true };
+  }
+
+  private async upgradeDomain(
+    id: string,
+    patch: {
+      domain: string;
+      normalizedDomain: string;
+      sourceUrl?: string;
+      externalId?: string;
+      metadata?: Record<string, unknown>;
+    },
+  ): Promise<DiscoveredCompanyRow> {
+    const { data, error } = await this.db
+      .from("discovered_companies")
+      .update({
+        domain: patch.domain,
+        normalized_domain: patch.normalizedDomain,
+        source_url: patch.sourceUrl,
+        external_id: patch.externalId ?? undefined,
+        raw_metadata: patch.metadata,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error || !data) {
+      throw new AppError(
+        "DATABASE_ERROR",
+        "Failed to update discovered company domain.",
+      );
+    }
+    return data;
+  }
+
+  private async refetchDuplicate(
+    runId: string,
+    identity: ReturnType<typeof resolveIncomingIdentity>,
+  ): Promise<DiscoveredCompanyRow | undefined> {
+    const rows = await this.listForRun(runId);
+    return selectExistingCompany(rows, identity);
   }
 
   async getOwned(

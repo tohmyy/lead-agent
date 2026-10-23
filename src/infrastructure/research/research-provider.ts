@@ -27,6 +27,11 @@ export interface WebsiteResearchProvider {
   research(request: ResearchRequest): Promise<ResearchResult>;
 }
 
+/** Default pages fetched in one research_website call when no urls are given. */
+export function defaultResearchUrls(domain: string): string[] {
+  return [`https://${domain}`, `https://${domain}/about`];
+}
+
 /** Pages worth researching for qualification (TOOLS-CONTRACT.md section 23) — bounded, not unlimited crawling. */
 export const RELEVANT_PAGE_PATHS: Record<
   Exclude<SourceType, "other">,

@@ -56,6 +56,7 @@ export type RunEventType =
   | "discovery_completed"
   | "company_research_started"
   | "company_research_completed"
+  | "company_research_failed"
   | "lead_qualified"
   | "lead_rejected"
   | "outreach_started"
@@ -141,6 +142,7 @@ export type DiscoveredCompanyRow = {
   company_name: string;
   domain: string;
   normalized_domain: string;
+  normalized_name: string;
   discovery_source: string;
   source_url: string | null;
   external_id: string | null;
@@ -237,6 +239,24 @@ export type NotificationRow = {
   created_at: string;
 };
 
+export type WebsiteResearchCacheRow = {
+  id: string;
+  normalized_domain: string;
+  normalized_url: string;
+  title: string | null;
+  source_type: SourceType;
+  summary: string;
+  relevant_excerpt: string | null;
+  provider: string;
+  fetched_at: string;
+};
+
+export type WebsiteResearchFailureRow = {
+  normalized_domain: string;
+  error_message: string;
+  failed_at: string;
+};
+
 /**
  * Marks `K` optional (columns with a DB-level default, e.g. `default now()`
  * or `default false`) while leaving every other column as-required for
@@ -276,6 +296,16 @@ type DiscoveredCompanyInsert = Optional<
   | "raw_metadata"
   | "discovered_at"
   | "created_at"
+>;
+
+type WebsiteResearchCacheInsert = Optional<
+  WebsiteResearchCacheRow,
+  "id" | "title" | "relevant_excerpt" | "fetched_at"
+>;
+
+type WebsiteResearchFailureInsert = Optional<
+  WebsiteResearchFailureRow,
+  "failed_at"
 >;
 
 type LeadInsert = Optional<
@@ -357,6 +387,16 @@ export type Database = {
         NotificationRow,
         NotificationInsert,
         Partial<NotificationRow>
+      >;
+      website_research_cache: Table<
+        WebsiteResearchCacheRow,
+        WebsiteResearchCacheInsert,
+        Partial<WebsiteResearchCacheRow>
+      >;
+      website_research_failures: Table<
+        WebsiteResearchFailureRow,
+        WebsiteResearchFailureInsert,
+        Partial<WebsiteResearchFailureRow>
       >;
     };
     Views: Record<string, never>;

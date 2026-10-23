@@ -63,6 +63,17 @@ export class ToolCallRepository {
       .eq("id", id);
   }
 
+  async countFailed(runId: string, toolName: string): Promise<number> {
+    const { count, error } = await this.db
+      .from("tool_calls")
+      .select("*", { count: "exact", head: true })
+      .eq("run_id", runId)
+      .eq("tool_name", toolName)
+      .eq("status", "failed");
+    if (error) return 0;
+    return count ?? 0;
+  }
+
   async listForRun(runId: string): Promise<ToolCallRow[]> {
     const { data } = await this.db
       .from("tool_calls")

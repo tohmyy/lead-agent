@@ -10,55 +10,12 @@ import type {
   DiscoveryRequest,
   DiscoveryResult,
 } from "./discovery-provider";
+import { normalizeDiscoveryItem } from "./normalize-discovery-item";
 
 const RUN_TIMEOUT_SECS = 120;
 
 /** Apify pricing models that indicate a flat-fee "rental" actor — never allowed (AGENTS.md #16). */
 const RENTAL_PRICING_MODELS = new Set(["FLAT_PRICE_PER_MONTH"]);
-
-function pickFirstString(
-  obj: Record<string, unknown>,
-  keys: string[],
-): string | undefined {
-  for (const key of keys) {
-    const value = obj[key];
-    if (typeof value === "string" && value.trim().length > 0)
-      return value.trim();
-  }
-  return undefined;
-}
-
-function normalizeItem(
-  item: Record<string, unknown>,
-): DiscoveredCompanyResult | null {
-  const companyName = pickFirstString(item, [
-    "companyName",
-    "name",
-    "title",
-    "company",
-  ]);
-  const domain = pickFirstString(item, [
-    "domain",
-    "website",
-    "url",
-    "companyUrl",
-    "site",
-  ]);
-  if (!companyName || !domain) return null;
-
-  return {
-    companyName,
-    domain,
-    sourceUrl: pickFirstString(item, [
-      "sourceUrl",
-      "url",
-      "profileUrl",
-      "linkedinUrl",
-    ]),
-    externalId: pickFirstString(item, ["id", "placeId", "externalId"]),
-    metadata: item,
-  };
-}
 
 export class ApifyDiscoveryProvider implements CompanyDiscoveryProvider {
   private _client: ApifyClient | undefined;
@@ -167,7 +124,7 @@ export class ApifyDiscoveryProvider implements CompanyDiscoveryProvider {
 
     const companies: DiscoveredCompanyResult[] = [];
     for (const item of items as Record<string, unknown>[]) {
-      const normalized = normalizeItem(item);
+      const normalized = normalizeDiscoveryItem(item);
       if (normalized) companies.push(normalized);
       if (companies.length >= request.maxItems) break;
     }
