@@ -121,7 +121,7 @@ export class RunOrchestrator {
             "The ICP for this run has just been approved. Research and qualify companies:",
             "1. Call get_run_context to see the qualified_target and current counts.",
             "2. Call discover_companies for candidates matching the approved ICP.",
-            "3. For each newly discovered company: call research_website, then record_source for evidence worth keeping, then get_company_context, then save_lead with your qualification decision. hard_filter_results must include one entry per approved hard filter, copying each filter string exactly, with result pass, fail, or unknown. Never mark a company qualified if any hard filter failed.",
+            "3. For each company in `discovered` (not `prefiltered`): call get_company_context first. If it already has a qualification decision, skip it. Otherwise call research_website, record_source for evidence worth keeping, then save_lead. hard_filter_results must include one entry per approved hard filter, copying each filter string exactly, with result pass, fail, or unknown. Never mark a company qualified if any hard filter failed. Companies in `prefiltered` are already saved — do not research them.",
             "4. Keep discovering/researching/qualifying more candidates until qualified_count reaches qualified_target, or a tool returns DISCOVERY_LIMIT_EXCEEDED / TARGET_ALREADY_REACHED and there are no more already-discovered, unqualified companies left to research.",
             "5. Do not generate outreach in this turn — that happens separately.",
           ].join("\n"),

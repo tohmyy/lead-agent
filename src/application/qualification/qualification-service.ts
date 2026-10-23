@@ -112,9 +112,13 @@ export class QualificationService {
       results: input.hard_filter_results,
     });
 
+    const existingLead = await this.leads.getByCompany(
+      input.company_id,
+      run.id,
+    );
     const wasAlreadyQualified =
-      (await this.leads.getByCompany(input.company_id, run.id))
-        ?.qualification_status === "qualified";
+      existingLead?.qualification_status === "qualified";
+    const alreadyDecided = existingLead !== null;
 
     const { lead } = await this.leads.upsert({
       runId: run.id,
@@ -134,7 +138,7 @@ export class QualificationService {
       });
     } else if (
       input.qualification_status !== "qualified" &&
-      !wasAlreadyQualified
+      !alreadyDecided
     ) {
       await this.runs.incrementCounts(run.id, { rejected_count: 1 });
       await this.events.record({
