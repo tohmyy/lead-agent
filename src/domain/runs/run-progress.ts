@@ -43,6 +43,7 @@ export const STAGE_ORDER: RunStage[] = [
 const RESEARCHING_EVENT_TYPES: ReadonlySet<RunEventType> = new Set([
   "company_research_started",
   "company_research_completed",
+  "company_research_failed",
   "lead_qualified",
   "lead_rejected",
 ]);

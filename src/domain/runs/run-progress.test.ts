@@ -96,6 +96,9 @@ describe("deriveStage", () => {
     expect(deriveStage("researching", "company_research_completed")).toBe(
       "researching_companies",
     );
+    expect(deriveStage("researching", "company_research_failed")).toBe(
+      "researching_companies",
+    );
     expect(deriveStage("researching", "lead_qualified")).toBe(
       "researching_companies",
     );

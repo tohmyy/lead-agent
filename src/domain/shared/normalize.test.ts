@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 
 import { AppError } from "./errors";
 import {
+  companyNameKey,
+  isProfileHost,
+  isResearchableDomain,
   normalizeCompanyName,
   normalizeDomain,
   normalizeUrl,
   parseUrlStrict,
+  unresolvedDomainForName,
 } from "./normalize";
 
 describe("normalizeDomain", () => {
@@ -23,6 +27,42 @@ describe("normalizeDomain", () => {
     const variants = ["https://www.acme.com/", "acme.com", "http://acme.com/"];
     const normalized = new Set(variants.map(normalizeDomain));
     expect(normalized.size).toBe(1);
+  });
+});
+
+describe("isProfileHost / isResearchableDomain", () => {
+  it("treats LinkedIn and other social hosts as not company websites", () => {
+    expect(isProfileHost("https://www.linkedin.com/company/dusk-mobile")).toBe(
+      true,
+    );
+    expect(isProfileHost("linkedin.com")).toBe(true);
+    expect(isResearchableDomain("https://linkedin.com/company/dusk-mobile")).toBe(
+      false,
+    );
+    expect(isResearchableDomain("dusk-mobile.com")).toBe(true);
+  });
+
+  it("does not treat a LinkedIn profile host as the same domain as the company site", () => {
+    expect(normalizeDomain("https://linkedin.com/company/dusk-mobile")).toBe(
+      "linkedin.com",
+    );
+    expect(normalizeDomain("https://dusk-mobile.com")).toBe("dusk-mobile.com");
+  });
+});
+
+describe("companyNameKey", () => {
+  it("collapses legal suffixes and punctuation so the same company matches", () => {
+    expect(companyNameKey("Dusk Mobile Inc.")).toBe(companyNameKey("Dusk Mobile"));
+    expect(companyNameKey("Streamline Factory, LLC")).toBe(
+      companyNameKey("Streamline Factory"),
+    );
+  });
+});
+
+describe("unresolvedDomainForName", () => {
+  it("is not researchable", () => {
+    const sentinel = unresolvedDomainForName("Dusk Mobile");
+    expect(isResearchableDomain(sentinel)).toBe(false);
   });
 });
 

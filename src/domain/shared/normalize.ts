@@ -26,6 +26,63 @@ export function normalizeCompanyName(input: string): string {
 }
 
 /**
+ * Profile / social hosts that must never be treated as a company website.
+ * Apify LinkedIn actors often return the profile URL in `url`/`website`.
+ */
+const PROFILE_HOSTS = new Set([
+  "linkedin.com",
+  "facebook.com",
+  "twitter.com",
+  "x.com",
+  "instagram.com",
+  "crunchbase.com",
+]);
+
+const LEGAL_SUFFIX =
+  /\b(inc|llc|ltd|corp|co|incorporated|limited|corporation)\b\.?/g;
+
+/** True when the hostname is a social/profile network, not a company site. */
+export function isProfileHost(input: string): boolean {
+  const host = normalizeDomain(input);
+  if (!host) return false;
+  if (PROFILE_HOSTS.has(host)) return true;
+  for (const profile of PROFILE_HOSTS) {
+    if (host.endsWith(`.${profile}`)) return true;
+  }
+  return false;
+}
+
+/**
+ * Comparison key for in-run name collapse: lowercase, strip punctuation
+ * and legal suffixes so "Dusk Mobile Inc." matches "Dusk Mobile".
+ */
+export function companyNameKey(input: string): string {
+  return normalizeCompanyName(input)
+    .toLowerCase()
+    .replace(/[.,'"()]/g, " ")
+    .replace(LEGAL_SUFFIX, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+const UNRESOLVED_SUFFIX = ".unresolved.invalid";
+
+/** Sentinel hostname used when discovery had no public company website. */
+export function unresolvedDomainForName(name: string): string {
+  const slug = companyNameKey(name).replace(/\s+/g, "-") || "unknown";
+  return `${slug}${UNRESOLVED_SUFFIX}`;
+}
+
+/** False for social hosts and for the no-website sentinel — do not Firecrawl. */
+export function isResearchableDomain(input: string): boolean {
+  const host = normalizeDomain(input);
+  if (!host) return false;
+  if (host.endsWith(UNRESOLVED_SUFFIX)) return false;
+  return !isProfileHost(host);
+}
+
+/**
  * Normalizes a full URL for source-deduplication (TOOL-CONTRACTS.md
  * section 43): same host normalization as normalizeDomain, but preserves
  * the path (not the query string or fragment) since two different pages
