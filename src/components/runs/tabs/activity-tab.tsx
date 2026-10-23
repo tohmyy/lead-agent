@@ -33,6 +33,10 @@ const EVENT_ICON: Record<RunEventType, { icon: LucideIcon; className: string }> 
     icon: CheckCircleIcon,
     className: "text-success",
   },
+  company_research_failed: {
+    icon: AlertCircleIcon,
+    className: "text-destructive",
+  },
   lead_qualified: { icon: CheckCircle2Icon, className: "text-success" },
   lead_rejected: {
     icon: CircleSlashIcon,
